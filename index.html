@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shot Scout 2">
+<meta name="theme-color" content="#0b0c0d">
+<title>Shot Scout 2</title>
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800&family=Roboto:wght@400;500;700&display=swap">
+<script>window.CESIUM_BASE_URL = "https://cdn.jsdelivr.net/npm/cesium@1.127.0/Build/Cesium/";</script>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.127.0/Build/Cesium/Cesium.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.127.0/Build/Cesium/Widgets/widgets.css">
+<style>
+  :root { --ink:#f3f1ea; --dim:#a9a79f; --panel:rgba(14,15,17,.76); --line:rgba(255,255,255,.15); --accent:#f4c20d; --warn:#ff7a45;
+    --ui:"Roboto", system-ui, -apple-system, "Segoe UI", sans-serif; --display:"Montserrat", "Roboto", system-ui, sans-serif; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:#0b0c0d; color:var(--ink); overflow:hidden;
+    font:14px/1.35 var(--ui); overscroll-behavior:none; -webkit-user-select:none; user-select:none; touch-action:none; }
+  input, button { font:inherit; color:inherit; }
+  #map { position:fixed; inset:0; }
+  .cesium-viewer-bottom { bottom:env(safe-area-inset-bottom, 0); }
+
+  /* light + frame overlays (never catch touches) */
+  .fx { position:fixed; inset:0; pointer-events:none; mix-blend-mode:multiply; opacity:0; transition:opacity .35s linear; }
+  #warm { background:linear-gradient(to top, #ff7a1a 0%, #ff9a3c 45%, #ffc27a 100%); }
+  #dark { background:linear-gradient(to top, #05081a 0%, #0a1030 100%); }
+  #frame { position:fixed; border:1px solid rgba(255,255,255,.8); box-shadow:0 0 0 4000px rgba(0,0,0,.55); pointer-events:none; }
+  #frame::before, #frame::after { content:""; position:absolute; }
+  #frame::before { left:33.33%; right:33.33%; top:0; bottom:0; border-left:1px solid rgba(255,255,255,.2); border-right:1px solid rgba(255,255,255,.2); }
+  #frame::after { top:33.33%; bottom:33.33%; left:0; right:0; border-top:1px solid rgba(255,255,255,.2); border-bottom:1px solid rgba(255,255,255,.2); }
+  #cross { position:fixed; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; pointer-events:none; border:2px solid var(--accent); border-radius:50%; }
+  #cross::after { content:""; position:absolute; left:50%; top:50%; width:4px; height:4px; margin:-2px; background:var(--accent); border-radius:50%; }
+
+  /* top */
+  #top { position:fixed; left:0; right:0; top:0; padding:calc(env(safe-area-inset-top, 0px) + 8px) 8px 0; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
+  #top > * { pointer-events:auto; }
+  #searchRow { display:flex; gap:6px; }
+  #q { flex:1; min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; -webkit-user-select:text; user-select:text; touch-action:auto;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  .btn { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; white-space:nowrap; font-weight:500;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  .btn:active { background:rgba(255,255,255,.22); }
+  .btn.on { border-color:var(--accent); color:var(--accent); }
+  .btn.go { background:var(--accent); color:#17130a; border-color:var(--accent); font-weight:700; }
+  .btn[disabled] { opacity:.4; }
+  .btn small { display:block; font-size:10px; color:var(--dim); font-weight:400; }
+  .btn.on small { color:inherit; }
+  #lenses { display:flex; gap:6px; overflow-x:auto; touch-action:pan-x; scrollbar-width:none; }
+  #lenses::-webkit-scrollbar { display:none; }
+  #lenses .btn { padding:7px 11px; font-family:var(--display); font-weight:800; font-size:12px; letter-spacing:.02em; }
+  #hud { align-self:flex-start; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:7px 10px; font-size:12px; color:var(--dim); pointer-events:none;
+    font-variant-numeric:tabular-nums; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  #hud b { color:var(--ink); font-weight:500; }
+  #hud b.warn { color:var(--warn); }
+
+  /* bottom */
+  #bottom { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom, 0px) + 26px); padding:0 8px; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+  #actions { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  #actions > * { pointer-events:auto; }
+  #sticks { display:flex; justify-content:space-between; padding:0 6px; transition:opacity .3s; }
+  .stick { width:132px; height:132px; border-radius:50%; background:rgba(14,15,17,.42); border:1px solid var(--line); position:relative; pointer-events:auto; touch-action:none; }
+  .stick i { position:absolute; left:50%; top:50%; width:52px; height:52px; margin:-26px; border-radius:50%; background:rgba(255,255,255,.88); box-shadow:0 2px 10px rgba(0,0,0,.4); }
+  .stick span { position:absolute; left:-10px; right:-10px; top:-18px; text-align:center; font-size:10px; color:var(--dim); letter-spacing:.06em; }
+  #gimbalWrap { position:fixed; right:2px; top:50%; width:44px; height:220px; margin-top:-130px; pointer-events:auto; }
+  #gimbal { position:absolute; left:50%; top:50%; width:200px; height:44px; margin:-22px 0 0 -100px; transform:rotate(-90deg); touch-action:none; accent-color:var(--accent); }
+  #gimbalWrap label { position:absolute; left:-40px; right:0; bottom:-22px; text-align:right; font-size:10px; color:var(--dim); }
+
+  /* clean viewfinder */
+  #cleanExit { position:fixed; right:8px; top:calc(env(safe-area-inset-top, 0px) + 8px); opacity:.55; font-size:12px; padding:7px 10px; }
+  body.clean #searchRow, body.clean #lenses, body.clean #actions, body.clean #gimbalWrap, body.clean #cross, body.clean .stick span { display:none !important; }
+  body.clean #sticks { opacity:.16; }
+  body.clean #hud { background:none; border-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; text-shadow:0 1px 3px #000; }
+
+  /* sheet */
+  #sheet { position:fixed; left:0; right:0; bottom:0; max-height:64%; overflow-y:auto; touch-action:pan-y; background:rgba(14,15,17,.92);
+    border-top:1px solid var(--line); border-radius:18px 18px 0 0; padding:14px 14px calc(env(safe-area-inset-bottom, 0px) + 18px);
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+  #sheet h3 { margin:16px 0 7px; font:800 11px var(--display); letter-spacing:.12em; color:var(--dim); text-transform:uppercase; }
+  #sheet h3:first-of-type { margin-top:0; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  .note { color:var(--dim); font-size:12px; }
+  #sheet input[type=range] { flex:1; min-width:140px; height:36px; accent-color:var(--accent); touch-action:pan-x; }
+  #sheet input[type=date], #sheet input[type=number] { background:#000; border:1px solid var(--line); border-radius:10px; padding:8px; -webkit-user-select:text; user-select:text; }
+  #sheet input[type=number] { width:84px; }
+  #sunBtns { display:flex; gap:6px; overflow-x:auto; touch-action:pan-x; scrollbar-width:none; margin-bottom:6px; }
+  #sunBtns::-webkit-scrollbar { display:none; }
+  #sunBtns .btn { padding:7px 10px; text-align:center; }
+  #timeLbl { font:800 18px var(--display); min-width:62px; }
+  .shot { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); }
+  .shot img { width:84px; height:48px; object-fit:cover; border-radius:6px; background:#000; flex:none; }
+  .shot div { flex:1; min-width:0; }
+  .shot small { color:var(--dim); display:block; }
+  #closeSheet { float:right; }
+
+  /* shot card */
+  #card { position:fixed; inset:0; background:rgba(6,7,8,.94); overflow-y:auto; touch-action:pan-y; padding:calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+  #card .inner { max-width:560px; margin:0 auto; }
+  #cardImg { width:100%; border-radius:10px; background:#000; display:block; }
+  #cardName { width:100%; margin:12px 0 4px; background:none; border:none; border-bottom:1px solid var(--line); padding:6px 0; font:800 20px var(--display); -webkit-user-select:text; user-select:text; touch-action:auto; }
+  #cardFacts { width:100%; border-collapse:collapse; margin:8px 0 14px; -webkit-user-select:text; user-select:text; }
+  #cardFacts td { padding:7px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+  #cardFacts td:first-child { color:var(--dim); width:38%; }
+  #cardBrand { margin-top:16px; text-align:center; color:var(--dim); font:800 10px var(--display); letter-spacing:.16em; text-transform:uppercase; }
+
+  /* splash */
+  #splash { position:fixed; inset:0; background:radial-gradient(120% 90% at 50% 30%, #1a1c20 0%, #0b0c0d 60%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:24px; transition:opacity .6s; }
+  #splash .mark { width:74px; height:74px; border:5px solid var(--accent); border-radius:50%; position:relative; margin-bottom:26px; }
+  #splash .mark::after { content:""; position:absolute; left:50%; top:50%; width:14px; height:14px; margin:-7px; border-radius:50%; background:var(--accent); }
+  #splash h1 { margin:0; font:800 34px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; }
+  #splash h1 span { color:var(--accent); }
+  #splash .by { margin:18px 0 0; color:var(--dim); font-size:15px; }
+  #splash .by b { color:var(--ink); font-weight:500; }
+  #splash .rule { width:54px; height:3px; background:var(--accent); margin:16px 0; }
+  #splash .co { font:800 15px var(--display); letter-spacing:.14em; text-transform:uppercase; }
+  #splash .tap { position:absolute; bottom:calc(env(safe-area-inset-bottom, 0px) + 34px); color:var(--dim); font-size:12px; letter-spacing:.08em; }
+
+  /* token gate + toast */
+  #gate { position:fixed; inset:0; background:#0b0c0d; display:flex; align-items:center; justify-content:center; padding:24px; touch-action:auto; }
+  #gate div { max-width:440px; }
+  #gate h1 { font:800 22px var(--display); margin:0 0 10px; }
+  #gate p { color:var(--dim); margin:0 0 12px; -webkit-user-select:text; user-select:text; }
+  #gate a { color:var(--accent); }
+  #tok { width:100%; background:#000; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; -webkit-user-select:text; user-select:text; }
+  #toast { position:fixed; left:50%; top:42%; transform:translateX(-50%); background:rgba(0,0,0,.86); border:1px solid var(--line); border-radius:12px; padding:10px 14px; max-width:86%; text-align:center; pointer-events:none; opacity:0; transition:opacity .25s; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="warm" class="fx"></div>
+<div id="dark" class="fx"></div>
+<div id="frame"></div>
+<div id="cross"></div>
+
+<div id="top">
+  <div id="searchRow">
+    <input id="q" type="search" placeholder="Search a place, or lat, lon" autocomplete="off" enterkeyhint="search">
+    <button class="btn go" id="goBtn">Go</button>
+  </div>
+  <div id="lenses"></div>
+  <div id="hud"></div>
+</div>
+<button class="btn" id="cleanExit" hidden>Show controls</button>
+
+<div id="gimbalWrap" hidden>
+  <input id="gimbal" type="range" min="-90" max="30" step="1" value="-15" aria-label="Gimbal tilt">
+  <label id="gimbalLbl">tilt -15°</label>
+</div>
+
+<div id="bottom">
+  <div id="sticks" hidden>
+    <div class="stick" id="stickL"><span>UP / DOWN · TURN</span><i></i></div>
+    <div class="stick" id="stickR"><span id="stickRLbl">FORWARD · SIDEWAYS</span><i></i></div>
+  </div>
+  <div id="actions">
+    <button class="btn go" id="takeoffBtn">Take off here</button>
+    <button class="btn" id="resumeBtn" hidden>Resume flight</button>
+    <button class="btn" id="scoutBtn" hidden>Scout</button>
+    <button class="btn" id="homeBtn" hidden>Home</button>
+    <button class="btn" id="speedBtn" hidden>Normal</button>
+    <button class="btn" id="saveBtn">Save shot</button>
+    <button class="btn" id="cleanBtn">Clean view</button>
+    <button class="btn" id="menuBtn">Plan</button>
+  </div>
+</div>
+
+<div id="sheet" hidden>
+  <button class="btn" id="closeSheet">Close</button>
+  <h3>Time of day</h3>
+  <div class="row">
+    <input id="date" type="date">
+    <b id="timeLbl">12:00</b>
+    <button class="btn" id="nowBtn">Now</button>
+  </div>
+  <div class="row"><input id="time" type="range" min="0" max="1439" step="5" value="720" aria-label="Time of day"></div>
+  <div id="sunBtns"></div>
+  <div class="row">
+    <span class="note">Location clock</span>
+    <button class="btn" id="tzMinus" aria-label="Earlier time zone">−</button>
+    <b id="tzLbl">UTC</b>
+    <button class="btn" id="tzPlus" aria-label="Later time zone">+</button>
+  </div>
+  <div class="row">
+    <button class="btn" id="sunPathBtn">Sun path off</button>
+    <button class="btn" id="shadowBtn">Shadows off</button>
+    <button class="btn" id="aspectBtn">Frame 16:9</button>
+  </div>
+
+  <h3>Camera move</h3>
+  <div class="row">
+    <button class="btn" id="setA">Set start</button>
+    <button class="btn" id="setB">Set end</button>
+    <button class="btn go" id="playBtn" disabled>Play move</button>
+  </div>
+  <div class="row"><input id="dur" type="range" min="3" max="60" step="1" value="10" aria-label="Move duration"><b id="durLbl">10 s</b></div>
+  <div class="note" id="moveInfo">Frame the opening, tap Set start. Frame the ending, tap Set end.</div>
+
+  <h3>Custom lens (full-frame equivalent mm)</h3>
+  <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
+
+  <h3>Saved shots</h3>
+  <div id="shots"></div>
+
+  <h3>Setup</h3>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button></div>
+</div>
+
+<div id="card" hidden>
+  <div class="inner">
+    <img id="cardImg" alt="Shot preview">
+    <input id="cardName" type="text" maxlength="40" aria-label="Shot name">
+    <table id="cardFacts"></table>
+    <div class="row">
+      <button class="btn go" id="cardView">Fly to it</button>
+      <button class="btn" id="cardShare">Share</button>
+      <button class="btn" id="cardDelete">Delete</button>
+      <button class="btn" id="cardClose">Close</button>
+    </div>
+    <div id="cardBrand">Shot Scout · Peacemaker Filmworks</div>
+  </div>
+</div>
+
+<div id="gate" hidden>
+  <div>
+    <h1>Shot Scout</h1>
+    <p>The 3D map streams through a free Cesium ion account. Sign up at <a href="https://ion.cesium.com/signup" target="_blank" rel="noopener">ion.cesium.com</a>, open Access Tokens, copy the default token and paste it below. It is stored only in this browser.</p>
+    <input id="tok" type="text" placeholder="Paste Cesium ion access token" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button class="btn go" id="tokBtn">Start</button>
+  </div>
+</div>
+
+<div id="splash">
+  <div class="mark"></div>
+  <h1>Shot <span>Scout</span></h1>
+  <p class="by">Created by <b>Patrick Weir</b></p>
+  <div class="rule"></div>
+  <div class="co">Peacemaker Filmworks</div>
+  <div class="tap">TAP TO START</div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var KEY = "ss2.";                     // keeps this version's data apart from version 1
+  var store = {
+    get: function (k) { try { return localStorage.getItem(KEY + k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(KEY + k, v); return true; } catch (e) { return false; } },
+    del: function (k) { try { localStorage.removeItem(KEY + k); } catch (e) {} }
+  };
+  var toastTimer;
+  function toast(msg, ms) {
+    var t = $("toast"); t.textContent = msg; t.style.opacity = 1;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.style.opacity = 0; }, ms || 2600);
+  }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function hhmm(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ":" + pad(m % 60); }
+  function tzText(tz) { var a = Math.abs(tz); return "UTC" + (tz < 0 ? "−" : "+") + Math.floor(a / 60) + (a % 60 ? ":" + pad(a % 60) : ""); }
+
+  // ---------- sun position (degrees; azimuth clockwise from north) ----------
+  function sunPosition(date, latDeg, lonDeg) {
+    var rad = Math.PI / 180;
+    var d = date.getTime() / 86400000 + 2440587.5 - 2451545.0;
+    var g = (357.529 + 0.98560028 * d) * rad;
+    var q = 280.459 + 0.98564736 * d;
+    var L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * rad;
+    var e = (23.439 - 0.00000036 * d) * rad;
+    var ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+    var dec = Math.asin(Math.sin(e) * Math.sin(L));
+    var gmst = (18.697374558 + 24.06570982441908 * d) * 15;
+    var ha = (gmst + lonDeg) * rad - ra;
+    var lat = latDeg * rad;
+    var el = Math.asin(Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(ha));
+    var az = Math.atan2(-Math.sin(ha), Math.tan(dec) * Math.cos(lat) - Math.sin(lat) * Math.cos(ha));
+    return { elevation: el / rad, azimuth: ((az / rad) % 360 + 360) % 360 };
+  }
+  // The instant for a calendar date + minutes on the location's clock (tz = minutes east of UTC).
+  function instant(dateStr, minutes, tz) {
+    var p = (dateStr || "").split("-");
+    if (p.length !== 3) return new Date();
+    var t = Date.UTC(+p[0], +p[1] - 1, +p[2], 0, minutes) - tz * 60000;
+    return isNaN(t) ? new Date() : new Date(t);
+  }
+  // Key moments of the day, as minutes on the location's clock (null when they don't happen).
+  function sunEvents(dateStr, tz, latDeg, lonDeg) {
+    var ev = { rise: null, goldAmEnd: null, noon: 0, goldPmStart: null, set: null, blue: null, noonEl: -90 };
+    var prev = null;
+    for (var m = 0; m <= 1440; m += 2) {
+      var el = sunPosition(instant(dateStr, m, tz), latDeg, lonDeg).elevation;
+      if (el > ev.noonEl) { ev.noonEl = el; ev.noon = m; }
+      if (prev !== null) {
+        if (prev < -0.833 && el >= -0.833 && ev.rise === null) ev.rise = m;
+        if (prev < 6 && el >= 6 && ev.goldAmEnd === null) ev.goldAmEnd = m;
+        if (prev >= 6 && el < 6) ev.goldPmStart = m;
+        if (prev >= -0.833 && el < -0.833) ev.set = m;
+        if (prev >= -5 && el < -5 && m > ev.noon) ev.blue = m;
+      }
+      prev = el;
+    }
+    return ev;
+  }
+  if (typeof module !== "undefined" && typeof window === "undefined") {
+    module.exports = { sunPosition: sunPosition, sunEvents: sunEvents, instant: instant, tzText: tzText, hhmm: hhmm }; return;
+  }
+
+  // ---------- splash ----------
+  (function () {
+    var s = $("splash"), gone = false;
+    function hide() { if (gone) return; gone = true; s.style.opacity = 0; setTimeout(function () { s.hidden = true; }, 650); }
+    s.addEventListener("click", hide); setTimeout(hide, 2800);
+  })();
+
+  // ---------- access token ----------
+  // Built-in map token so the app opens straight away for anyone with the link.
+  // A token saved on the device (via Setup) takes priority over this one.
+  var BUILT_IN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjMTA1YzQ5Zi05YTU0LTRhZWItOWUxMy1iNmI3NjFmODAxMGMiLCJpZCI6MTcxMjkzLCJpYXQiOjE2OTcwNDgxMjF9.BaBv8RKays5uf7aJ33rXQJ406yvm_PTA-Xych87xmak";
+  var token = store.get("ionToken") || BUILT_IN_TOKEN;
+  function showGate() {
+    $("gate").hidden = false;
+    $("tokBtn").onclick = function () {
+      var v = $("tok").value.trim();
+      if (v.length < 20) { toast("That doesn't look like a token"); return; }
+      store.set("ionToken", v); location.reload();
+    };
+  }
+  if (!token) { showGate(); return; }
+  if (typeof Cesium === "undefined") { toast("Couldn't load the 3D engine. Check your connection and reload.", 60000); return; }
+
+  // ---------- state ----------
+  var R = 6378137, D2R = Math.PI / 180, TWO_PI = 2 * Math.PI;
+  var deviceTz = -new Date().getTimezoneOffset();
+  var S = { mode: "scout", lon: 0, lat: 0, h: 0, heading: 0, gimbal: -15, gimbalT: -15, bank: 0, nose: 0, flown: false,
+            vf: 0, vr: 0, vu: 0, vy: 0, home: null, focal: 24, prevFocal: 24, aspectIx: 0, speed: "normal", tz: deviceTz,
+            sunPath: false, sunCenter: null, moveA: null, moveB: null, playT: 0, playDur: 10 };
+  var SPEEDS = { cine:   { h: 3,  v: 1.5, y: 20,  label: "Cine" },
+                 normal: { h: 10, v: 4,   y: 60,  label: "Normal" },
+                 sport:  { h: 19, v: 6,   y: 90,  label: "Sport" },
+                 fpv:    { h: 32, v: 12,  y: 150, label: "FPV" } };
+  var ASPECTS = [[16 / 9, "16:9"], [2.39, "2.39:1"], [4 / 3, "4:3"], [9 / 16, "9:16"]];
+  var LIMIT_H = 122, LIMIT_D = 500;     // metres: common legal ceiling, and a rough line-of-sight guide
+  var input = { lx: 0, ly: 0, rx: 0, ry: 0 };
+  var keys = {};
+
+  // ---------- viewer ----------
+  Cesium.Ion.defaultAccessToken = token;
+  var viewer = new Cesium.Viewer("map", {
+    globe: false, animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false,
+    sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false,
+    shadows: false
+  });
+  var scene = viewer.scene, camera = viewer.camera;
+  viewer.clock.shouldAnimate = false;
+  try { scene.skyAtmosphere.show = true; } catch (e) {}
+  function tuneShadows() {
+    try {
+      var sm = viewer.shadowMap;
+      sm.softShadows = true; sm.size = 2048; sm.maximumDistance = 1800; sm.darkness = 0.5; sm.normalOffset = true;
+      var b = sm._primitiveBias;        // extra bias to calm the striping on photo-scanned surfaces
+      if (b) { b.depthBias = 0.0008; b.normalOffsetScale = 2.5; b.polygonOffsetFactor = 2.0; b.polygonOffsetUnits = 6.0; }
+    } catch (e) {}
+  }
+
+  camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-123.152, 49.312, 650),
+                   orientation: { heading: 135 * D2R, pitch: -28 * D2R, roll: 0 } });
+
+  Cesium.createGooglePhotorealistic3DTileset().then(function (ts) {
+    scene.primitives.add(ts);
+  }).catch(function (err) {
+    console.error(err);
+    toast("The 3D map didn't load. Check the access token under Plan > Setup.", 9000);
+  });
+
+  // ---------- lens + frame guide ----------
+  var LENSES = [18, 24, 35, 50, 75];
+  var frameRect = { x: 0, y: 0, w: 1, h: 1 };
+  function buildLenses() {
+    var box = $("lenses"); box.innerHTML = "";
+    var list = LENSES.indexOf(S.focal) < 0 ? LENSES.concat([S.focal]).sort(function (a, b) { return a - b; }) : LENSES;
+    list.forEach(function (mm) {
+      var b = document.createElement("button");
+      b.className = "btn" + (mm === S.focal ? " on" : ""); b.textContent = mm + "mm";
+      b.onclick = function () { S.focal = mm; buildLenses(); applyLens(); };
+      box.appendChild(b);
+    });
+  }
+  function applyLens() {
+    var w = window.innerWidth, h = window.innerHeight, A = ASPECTS[S.aspectIx][0];
+    var fw = Math.min(w, h * A), fh = fw / A;              // frame guide fitted inside the screen
+    frameRect = { x: (w - fw) / 2, y: (h - fh) / 2, w: fw, h: fh };
+    var f = $("frame").style;
+    f.width = fw + "px"; f.height = fh + "px"; f.left = frameRect.x + "px"; f.top = frameRect.y + "px";
+    // 43.27 mm is the full-frame diagonal; the frame guide shows exactly what that lens sees.
+    var tanHalfDiag = 43.27 / (2 * S.focal);
+    var tanHalfW = tanHalfDiag * A / Math.sqrt(A * A + 1);
+    var focalPx = (fw / 2) / tanHalfW;
+    var fov = 2 * Math.atan((Math.max(w, h) / 2) / focalPx);
+    if (camera.frustum && camera.frustum.fov !== undefined) camera.frustum.fov = Math.min(fov, 175 * D2R);
+  }
+  window.addEventListener("resize", applyLens);
+  var lensTick = 0;
+  scene.preRender.addEventListener(function () { if (++lensTick % 120 === 0) applyLens(); });
+  $("aspectBtn").onclick = function () {
+    S.aspectIx = (S.aspectIx + 1) % ASPECTS.length;
+    this.textContent = "Frame " + ASPECTS[S.aspectIx][1]; applyLens();
+  };
+  $("customBtn").onclick = function () {
+    var mm = Math.round(+$("customMm").value);
+    if (!(mm >= 8 && mm <= 1200)) { toast("Enter a focal length from 8 to 1200"); return; }
+    S.focal = mm; buildLenses(); applyLens();
+  };
+
+  // ---------- time of day ----------
+  var sunNow = { elevation: 45, azimuth: 180 };
+  function chosenDate() { return instant($("date").value, +$("time").value, S.tz); }
+  function refPoint() { var c = camera.positionCartographic; return { lat: c.latitude / D2R, lon: c.longitude / D2R }; }
+  function applyTime() {
+    var d = chosenDate(), p = refPoint();
+    $("timeLbl").textContent = hhmm(+$("time").value);
+    $("tzLbl").textContent = tzText(S.tz);
+    viewer.clock.currentTime = Cesium.JulianDate.fromDate(d);
+    sunNow = sunPosition(d, p.lat, p.lon);
+    var el = sunNow.elevation;
+    var warm = el > 14 ? 0 : el > 3 ? (14 - el) / 11 * 0.30 : el > -6 ? 0.30 * (el + 6) / 9 : 0;
+    var dark = el > 1 ? 0 : Math.min(0.82, (1 - el) / 13 * 0.82);
+    $("warm").style.opacity = warm.toFixed(3);
+    $("dark").style.opacity = dark.toFixed(3);
+    drawSunPath();
+  }
+  function setNow() {
+    var n = new Date(Date.now() + S.tz * 60000);
+    $("date").value = n.getUTCFullYear() + "-" + pad(n.getUTCMonth() + 1) + "-" + pad(n.getUTCDate());
+    $("time").value = n.getUTCHours() * 60 + n.getUTCMinutes();
+    applyTime(); buildSunButtons();
+  }
+  function buildSunButtons() {
+    var p = refPoint(), ev = sunEvents($("date").value, S.tz, p.lat, p.lon), box = $("sunBtns");
+    box.innerHTML = "";
+    var items = [];
+    if (ev.rise !== null) items.push(["Sunrise", ev.rise]);
+    if (ev.rise !== null && ev.goldAmEnd !== null) items.push(["Golden AM", Math.round((ev.rise + ev.goldAmEnd) / 2)]);
+    items.push(["Solar noon", ev.noon]);
+    if (ev.set !== null && ev.goldPmStart !== null) items.push(["Golden PM", Math.round((ev.goldPmStart + ev.set) / 2)]);
+    if (ev.set !== null) items.push(["Sunset", ev.set]);
+    if (ev.blue !== null) items.push(["Blue hour", ev.blue]);
+    items.forEach(function (it) {
+      var b = document.createElement("button"); b.className = "btn";
+      b.appendChild(document.createTextNode(it[0]));
+      var s = document.createElement("small"); s.textContent = hhmm(it[1]); b.appendChild(s);
+      b.onclick = function () { $("time").value = Math.max(0, Math.min(1439, it[1])); applyTime(); };
+      box.appendChild(b);
+    });
+    if (ev.rise === null && ev.set === null) {
+      var n = document.createElement("span"); n.className = "note";
+      n.textContent = ev.noonEl > 0 ? "The sun doesn't set on this date here." : "The sun doesn't rise on this date here.";
+      box.appendChild(n);
+    }
+    return ev;
+  }
+  function autoTz(lonDeg) {
+    var est = Math.round(lonDeg / 15) * 60;
+    var next = Math.abs(est - deviceTz) <= 60 ? deviceTz : est;
+    if (next !== S.tz) { S.tz = next; toast("Clock set to " + tzText(S.tz) + " for this location. Adjust it under Plan if it's off.", 4200); }
+  }
+  $("date").oninput = function () { applyTime(); buildSunButtons(); };
+  $("time").oninput = applyTime; $("nowBtn").onclick = setNow;
+  $("tzMinus").onclick = function () { S.tz = Math.max(-720, S.tz - 30); applyTime(); buildSunButtons(); };
+  $("tzPlus").onclick = function () { S.tz = Math.min(840, S.tz + 30); applyTime(); buildSunButtons(); };
+  setInterval(applyTime, 3000);
+  $("shadowBtn").onclick = function () {
+    viewer.shadows = !viewer.shadows;
+    if (viewer.shadows) tuneShadows();
+    this.textContent = viewer.shadows ? "Shadows on" : "Shadows off"; this.classList.toggle("on", viewer.shadows);
+  };
+
+  // ---------- sun path drawn in the scene ----------
+  var sunEntities = [], sunKey = "";
+  function clearSunPath() { sunEntities.forEach(function (e) { viewer.entities.remove(e); }); sunEntities = []; sunKey = ""; }
+  function drawSunPath() {
+    if (!S.sunPath || !S.sunCenter) return;
+    var c = S.sunCenter, key = [$("date").value, S.tz, $("time").value, c.lon.toFixed(5), c.lat.toFixed(5)].join("|");
+    if (key === sunKey) return;
+    clearSunPath(); sunKey = key;
+    var enu = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(c.lon, c.lat, c.h + 2));
+    var RADIUS = 600;
+    function at(az, el, r) {
+      var a = az * D2R, e = el * D2R;
+      return Cesium.Matrix4.multiplyByPoint(enu, new Cesium.Cartesian3(r * Math.cos(e) * Math.sin(a), r * Math.cos(e) * Math.cos(a), r * Math.sin(e)), new Cesium.Cartesian3());
+    }
+    var gold = Cesium.Color.fromCssColorString("#f4c20d"), date = $("date").value;
+    var arc = [];
+    for (var m = 0; m <= 1440; m += 10) {
+      var sp = sunPosition(instant(date, m, S.tz), c.lat, c.lon);
+      if (sp.elevation >= -0.9) arc.push(at(sp.azimuth, Math.max(0, sp.elevation), RADIUS));
+    }
+    function line(pts, color, width) {
+      sunEntities.push(viewer.entities.add({ polyline: { positions: pts, width: width, material: color, depthFailMaterial: color.withAlpha(0.35), arcType: Cesium.ArcType.NONE } }));
+    }
+    function label(pos, text) {
+      sunEntities.push(viewer.entities.add({ position: pos, label: { text: text, font: "600 13px sans-serif", fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new Cesium.Cartesian2(0, -16), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+    }
+    if (arc.length > 1) line(arc, gold, 3);
+    var ev = sunEvents(date, S.tz, c.lat, c.lon), origin = at(0, 0, 0);
+    if (ev.rise !== null) {
+      var r = sunPosition(instant(date, ev.rise, S.tz), c.lat, c.lon), rp = at(r.azimuth, 0, RADIUS);
+      line([origin, rp], Cesium.Color.fromCssColorString("#ffb05c"), 2); label(rp, "sunrise " + hhmm(ev.rise));
+    }
+    if (ev.set !== null) {
+      var s = sunPosition(instant(date, ev.set, S.tz), c.lat, c.lon), spt = at(s.azimuth, 0, RADIUS);
+      line([origin, spt], Cesium.Color.fromCssColorString("#ff7a45"), 2); label(spt, "sunset " + hhmm(ev.set));
+    }
+    var now = sunPosition(chosenDate(), c.lat, c.lon);
+    if (now.elevation > -0.9) {
+      var np = at(now.azimuth, Math.max(0, now.elevation), RADIUS);
+      line([origin, np], Cesium.Color.WHITE.withAlpha(0.8), 1.5);
+      sunEntities.push(viewer.entities.add({ position: np, point: { pixelSize: 16, color: gold, outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+      label(np, hhmm(+$("time").value));
+    }
+  }
+  function pickCentre() {
+    var c = scene.canvas, p;
+    try { p = scene.pickPosition(new Cesium.Cartesian2(c.clientWidth / 2, c.clientHeight / 2)); } catch (e) {}
+    if (!p) return null;
+    var g = Cesium.Cartographic.fromCartesian(p);
+    return { lon: g.longitude / D2R, lat: g.latitude / D2R, h: g.height };
+  }
+  $("sunPathBtn").onclick = function () {
+    if (S.sunPath) { S.sunPath = false; clearSunPath(); }
+    else {
+      var c = S.home || pickCentre();
+      if (!c) { toast("Aim the middle of the screen at the ground, then try again"); return; }
+      S.sunCenter = c; S.sunPath = true; drawSunPath();
+      toast("Sun path drawn around " + (S.home ? "your takeoff point" : "the spot you're looking at"));
+    }
+    this.textContent = S.sunPath ? "Sun path on" : "Sun path off"; this.classList.toggle("on", S.sunPath);
+  };
+
+  // ---------- modes ----------
+  function setGimbal(deg) { S.gimbal = S.gimbalT = deg; $("gimbal").value = deg; $("gimbalLbl").textContent = "tilt " + Math.round(deg) + "°"; }
+  function setMode(m) {
+    S.mode = m;
+    var fly = m === "fly", play = m === "play", air = fly || play;
+    scene.screenSpaceCameraController.enableInputs = !air;
+    $("sticks").hidden = !fly; $("gimbalWrap").hidden = !fly;
+    $("searchRow").hidden = air; $("cross").hidden = air;
+    $("takeoffBtn").hidden = air; $("resumeBtn").hidden = air || !S.flown;
+    $("scoutBtn").hidden = !fly; $("homeBtn").hidden = !fly; $("speedBtn").hidden = !fly;
+    if (fly) { S.flown = true; S.vf = S.vr = S.vu = S.vy = 0; }
+    if (!air) { S.bank = 0; S.nose = 0; }
+  }
+  var homeEntity = null;
+  function setHome(lonDeg, latDeg, height) {
+    S.home = { lon: lonDeg, lat: latDeg, h: height };
+    var pos = Cesium.Cartesian3.fromDegrees(lonDeg, latDeg, height);
+    if (!homeEntity) {
+      homeEntity = viewer.entities.add({ position: pos,
+        point: { pixelSize: 14, color: Cesium.Color.fromCssColorString("#f4c20d"), outlineColor: Cesium.Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+        label: { text: "H", font: "bold 14px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -18), fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    } else { homeEntity.position = pos; }
+  }
+  $("takeoffBtn").onclick = function () {
+    var g = pickCentre();
+    if (!g) { toast("Point the circle at the ground where you'd take off, then try again"); return; }
+    setHome(g.lon, g.lat, g.h);
+    S.lon = g.lon * D2R; S.lat = g.lat * D2R; S.h = g.h + 30; S.heading = camera.heading; setGimbal(-15);
+    setMode("fly"); toast("Airborne, 30 m above your takeoff point");
+  };
+  $("resumeBtn").onclick = function () { setMode("fly"); };
+  $("scoutBtn").onclick = function () { setMode("scout"); };
+  $("homeBtn").onclick = function () {
+    if (!S.home) return;
+    S.lon = S.home.lon * D2R; S.lat = S.home.lat * D2R; S.h = Math.max(S.h, S.home.h + 10);
+    S.vf = S.vr = S.vu = 0; toast("Back over the takeoff point");
+  };
+  $("speedBtn").onclick = function () {
+    var order = ["cine", "normal", "sport", "fpv"], was = S.speed;
+    S.speed = order[(order.indexOf(S.speed) + 1) % order.length];
+    this.textContent = SPEEDS[S.speed].label; this.classList.toggle("on", S.speed === "fpv");
+    if (S.speed === "fpv") {
+      S.prevFocal = S.focal; S.focal = 14; setGimbal(10);
+      $("stickRLbl").textContent = "FORWARD · BANK";
+      toast("FPV: wide lens, banked turns, more speed and drift");
+    } else if (was === "fpv") {
+      S.focal = S.prevFocal; setGimbal(-15); $("stickRLbl").textContent = "FORWARD · SIDEWAYS";
+    }
+    buildLenses(); applyLens();
+  };
+  $("gimbal").oninput = function () { S.gimbalT = +this.value; $("gimbalLbl").textContent = "tilt " + S.gimbalT + "°"; };
+
+  // ---------- clean viewfinder ----------
+  function setClean(on) { document.body.classList.toggle("clean", on); $("cleanExit").hidden = !on; }
+  $("cleanBtn").onclick = function () { setClean(true); };
+  $("cleanExit").onclick = function () { setClean(false); };
+
+  // ---------- sticks + keyboard ----------
+  function makeStick(el, onMove) {
+    var knob = el.querySelector("i"), id = null, max = 44;
+    function set(e) {
+      var r = el.getBoundingClientRect();
+      var dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      var len = Math.hypot(dx, dy); if (len > max) { dx *= max / len; dy *= max / len; }
+      knob.style.transform = "translate(" + dx + "px," + dy + "px)";
+      onMove(dx / max, -dy / max);
+    }
+    function end(e) { if (e.pointerId !== id) return; id = null; knob.style.transform = ""; onMove(0, 0); }
+    el.addEventListener("pointerdown", function (e) { id = e.pointerId; try { el.setPointerCapture(id); } catch (x) {} set(e); e.preventDefault(); });
+    el.addEventListener("pointermove", function (e) { if (e.pointerId === id) set(e); });
+    el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+  }
+  makeStick($("stickL"), function (x, y) { input.lx = x; input.ly = y; });
+  makeStick($("stickR"), function (x, y) { input.rx = x; input.ry = y; });
+  window.addEventListener("keydown", function (e) { if (e.target.tagName !== "INPUT") keys[e.key.toLowerCase()] = true; });
+  window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
+  function axis(pos, neg) { return (keys[pos] ? 1 : 0) - (keys[neg] ? 1 : 0); }
+  function curve(v) { return v * Math.abs(v); }   // finer control near centre
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  // ---------- camera moves ----------
+  function captureState() {
+    if (S.mode === "fly") return { lon: S.lon, lat: S.lat, h: S.h, heading: S.heading, gimbal: S.gimbal, focal: S.focal };
+    var c = camera.positionCartographic;
+    return { lon: c.longitude, lat: c.latitude, h: c.height, heading: camera.heading, gimbal: camera.pitch / D2R, focal: S.focal };
+  }
+  function moveDistance() {
+    var a = S.moveA, b = S.moveB;
+    var dn = (b.lat - a.lat) * R, de = (b.lon - a.lon) * R * Math.cos(a.lat);
+    return Math.hypot(dn, de, b.h - a.h);
+  }
+  function updateMoveInfo() {
+    $("durLbl").textContent = S.playDur + " s";
+    $("setA").classList.toggle("on", !!S.moveA); $("setB").classList.toggle("on", !!S.moveB);
+    $("playBtn").disabled = !(S.moveA && S.moveB);
+    if (S.moveA && S.moveB) {
+      var d = moveDistance();
+      $("moveInfo").textContent = d.toFixed(0) + " m in " + S.playDur + " s · average " + (d / S.playDur).toFixed(1) + " m/s (" + (d / S.playDur * 3.6).toFixed(0) + " km/h) · " +
+        S.moveA.focal + "mm to " + S.moveB.focal + "mm";
+    } else if (S.moveA) { $("moveInfo").textContent = "Start set. Now frame the ending and tap Set end."; }
+  }
+  $("setA").onclick = function () { S.moveA = captureState(); updateMoveInfo(); toast("Start of move set"); };
+  $("setB").onclick = function () { S.moveB = captureState(); updateMoveInfo(); toast("End of move set"); };
+  $("dur").oninput = function () { S.playDur = +this.value; updateMoveInfo(); };
+  $("playBtn").onclick = function () {
+    if (!(S.moveA && S.moveB)) return;
+    if (!S.home) setHome(S.moveA.lon / D2R, S.moveA.lat / D2R, S.moveA.h - 30);
+    $("sheet").hidden = true; S.playT = 0; setMode("play"); setClean(true);
+  };
+  function stepPlay(dt) {
+    S.playT = Math.min(1, S.playT + dt / S.playDur);
+    var a = S.moveA, b = S.moveB, t = S.playT, e = t * t * (3 - 2 * t);
+    var dh = ((b.heading - a.heading + 3 * Math.PI) % TWO_PI) - Math.PI;
+    S.lon = a.lon + (b.lon - a.lon) * e; S.lat = a.lat + (b.lat - a.lat) * e; S.h = a.h + (b.h - a.h) * e;
+    S.heading = (a.heading + dh * e + TWO_PI) % TWO_PI;
+    S.gimbal = S.gimbalT = a.gimbal + (b.gimbal - a.gimbal) * e;
+    var f = Math.exp(Math.log(a.focal) + (Math.log(b.focal) - Math.log(a.focal)) * e);
+    if (Math.abs(f - S.focal) > 0.01) { S.focal = f; applyLens(); }
+    camera.setView({ destination: Cesium.Cartesian3.fromRadians(S.lon, S.lat, S.h), orientation: { heading: S.heading, pitch: S.gimbal * D2R, roll: 0 } });
+    if (S.playT >= 1) {
+      S.focal = b.focal; setGimbal(clamp(Math.round(b.gimbal), -90, 30)); buildLenses(); applyLens();
+      setClean(false); setMode("fly"); toast("Move finished. Open Plan to replay or adjust it.");
+    }
+  }
+
+  // ---------- flight loop ----------
+  var last = performance.now();
+  scene.preUpdate.addEventListener(function () {
+    var now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (S.mode === "play") { stepPlay(dt); return; }
+    if (S.mode !== "fly") return;
+    var sp = SPEEDS[S.speed], fpv = S.speed === "fpv";
+    var tu = curve(input.ly) + axis("w", "s"), ty = curve(input.lx) + axis("d", "a");
+    var tf = curve(input.ry) + axis("arrowup", "arrowdown"), tr = curve(input.rx) + axis("arrowright", "arrowleft");
+    var k = Math.min(1, dt * (fpv ? 1.4 : 3.2));    // FPV carries more momentum
+    var side = fpv ? 0.45 : 1;
+    if (fpv) ty += tr * 0.55 * clamp(Math.abs(S.vf) / sp.h + 0.3, 0, 1);   // banking pulls the nose round
+    S.vf += (tf * sp.h - S.vf) * k; S.vr += (tr * sp.h * side - S.vr) * k;
+    S.vu += (tu * sp.v - S.vu) * k; S.vy += (clamp(ty, -1.3, 1.3) * sp.y * D2R - S.vy) * Math.min(1, dt * 6);
+    S.heading = (S.heading + S.vy * dt + TWO_PI) % TWO_PI;
+    var north = (S.vf * Math.cos(S.heading) - S.vr * Math.sin(S.heading)) * dt;
+    var east = (S.vf * Math.sin(S.heading) + S.vr * Math.cos(S.heading)) * dt;
+    S.lat += north / R; S.lon += east / (R * Math.cos(S.lat)); S.h += S.vu * dt;
+    // gimbal eases to its target; FPV adds bank and a nose-down lean with speed
+    S.gimbal += (S.gimbalT - S.gimbal) * Math.min(1, dt * 5);
+    var bankT = fpv ? clamp(tr * 48 + (S.vy / (sp.y * D2R)) * 16, -60, 60) * D2R : 0;
+    var noseT = fpv ? -(S.vf / sp.h) * 20 * D2R : 0;
+    S.bank += (bankT - S.bank) * Math.min(1, dt * 5); S.nose += (noseT - S.nose) * Math.min(1, dt * 4);
+    camera.setView({ destination: Cesium.Cartesian3.fromRadians(S.lon, S.lat, S.h),
+                     orientation: { heading: S.heading, pitch: clamp(S.gimbal * D2R + S.nose, -Math.PI / 2, Math.PI / 2 - 0.01), roll: S.bank } });
+  });
+
+  // ---------- HUD ----------
+  function compass(deg) { return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(deg / 45) % 8]; }
+  function homeOffset(lonRad, latRad, h, home) {
+    var dn = (latRad - home.lat * D2R) * R, de = (lonRad - home.lon * D2R) * R * Math.cos(latRad);
+    return { up: h - home.h, dist: Math.hypot(dn, de) };
+  }
+  function sunText(s) { return s.elevation < 0 ? "below horizon" : Math.round(s.elevation) + "° high, " + compass(s.azimuth) + " " + Math.round(s.azimuth) + "°"; }
+  setInterval(function () {
+    var sun = hhmm(+$("time").value) + " · sun <b>" + sunText(sunNow) + "</b>", lens = Math.round(S.focal) + "mm";
+    if ((S.mode === "fly" || S.mode === "play") && S.home) {
+      var o = homeOffset(S.lon, S.lat, S.h, S.home), hd = S.heading / D2R;
+      $("hud").innerHTML = "H <b" + (o.up > LIMIT_H ? ' class="warn"' : "") + ">" + o.up.toFixed(0) + " m</b> · D <b" + (o.dist > LIMIT_D ? ' class="warn"' : "") + ">" + o.dist.toFixed(0) +
+        " m</b> · <b>" + Math.hypot(S.vf, S.vr).toFixed(1) + " m/s</b> · hdg <b>" + compass(hd) + " " + Math.round(hd) + "°</b><br>" + lens + " · " + sun +
+        (o.up > LIMIT_H ? '<br><b class="warn">Above ' + LIMIT_H + " m</b>" : "");
+    } else {
+      $("hud").innerHTML = "Scouting · " + lens + " · " + sun;
+    }
+  }, 200);
+
+  // ---------- search ----------
+  function flyAround(lonDeg, latDeg, height, range, pitch, secs) {
+    return new Promise(function (res) {
+      camera.flyToBoundingSphere(new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(lonDeg, latDeg, height), 0),
+        { offset: new Cesium.HeadingPitchRange(0, pitch, range), duration: secs, complete: res, cancel: res });
+    });
+  }
+  function goTo(lonDeg, latDeg) {
+    setMode("scout");
+    return flyAround(lonDeg, latDeg, 0, 9000, -1.2, 2.5).then(function () {
+      var sample = scene.sampleHeightMostDetailed([Cesium.Cartographic.fromDegrees(lonDeg, latDeg)])
+        .then(function (r) { return r && r[0] && isFinite(r[0].height) ? r[0].height : 0; }).catch(function () { return 0; });
+      var timeout = new Promise(function (res) { setTimeout(function () { res(null); }, 9000); });
+      return Promise.race([sample, timeout]);
+    }).then(function (ground) {
+      if (ground === null) return;            // still loading: stay at the high view
+      return flyAround(lonDeg, latDeg, ground, 700, -0.6, 2);
+    }).then(function () { autoTz(lonDeg); applyTime(); buildSunButtons(); });
+  }
+  function search() {
+    var q = $("q").value.trim(); if (!q) return;
+    $("q").blur();
+    var m = q.match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+    if (m && Math.abs(+m[1]) <= 90 && Math.abs(+m[2]) <= 180) { goTo(+m[2], +m[1]); return; }
+    toast("Searching…");
+    var opts = { scene: scene };
+    if (Cesium.IonGeocodeProviderType) opts.geocodeProviderType = Cesium.IonGeocodeProviderType.GOOGLE;
+    new Cesium.IonGeocoderService(opts).geocode(q).then(function (r) {
+      if (!r || !r.length) { toast("No match. Try a fuller name, or paste lat, lon"); return; }
+      var d = r[0].destination;
+      var c = d instanceof Cesium.Rectangle ? Cesium.Rectangle.center(d) : Cesium.Cartographic.fromCartesian(d);
+      goTo(c.longitude / D2R, c.latitude / D2R);
+    }).catch(function (err) { console.error(err); toast("Search failed. You can paste coordinates as lat, lon instead"); });
+  }
+  $("goBtn").onclick = search;
+  $("q").addEventListener("keydown", function (e) { if (e.key === "Enter") search(); });
+
+  // ---------- saved shots + shot cards ----------
+  function loadShots() { try { return JSON.parse(store.get("shots") || "[]"); } catch (e) { return []; } }
+  function saveShots(list) {
+    if (store.set("shots", JSON.stringify(list))) return true;
+    // storage is full: drop preview images from the oldest shots until it fits
+    for (var i = 0; i < list.length; i++) { if (list[i].img) { list[i].img = null; if (store.set("shots", JSON.stringify(list))) return true; } }
+    return false;
+  }
+  // Grab what's inside the frame guide, with the time-of-day tint applied.
+  function grabFrame(cb) {
+    var off = scene.postRender.addEventListener(function () {
+      off();
+      try {
+        var c = scene.canvas, k = c.width / c.clientWidth, f = frameRect;
+        var out = document.createElement("canvas"); out.width = 640; out.height = Math.round(640 * f.h / f.w);
+        var g = out.getContext("2d");
+        g.drawImage(c, f.x * k, f.y * k, f.w * k, f.h * k, 0, 0, out.width, out.height);
+        g.globalCompositeOperation = "multiply";
+        var w = +$("warm").style.opacity, d = +$("dark").style.opacity;
+        if (w > 0) { g.globalAlpha = w; g.fillStyle = "#ff9a3c"; g.fillRect(0, 0, out.width, out.height); }
+        if (d > 0) { g.globalAlpha = d; g.fillStyle = "#070b22"; g.fillRect(0, 0, out.width, out.height); }
+        cb(out.toDataURL("image/jpeg", 0.72));
+      } catch (e) { cb(null); }
+    });
+  }
+  function shotFacts(s) {
+    var latD = s.lat / D2R, lonD = s.lon / D2R, tz = s.tz === undefined ? deviceTz : s.tz;
+    var sun = sunPosition(instant(s.date, s.minutes, tz), latD, lonD), hd = s.heading / D2R;
+    var facts = [["Lens", Math.round(s.focal) + "mm full-frame equivalent"],
+                 ["When", s.date + " " + hhmm(s.minutes) + " (" + tzText(tz) + ")"],
+                 ["Sun", sunText(sun)],
+                 ["Drone position", latD.toFixed(6) + ", " + lonD.toFixed(6)],
+                 ["Heading", compass(hd) + " " + Math.round(hd) + "°"],
+                 ["Camera tilt", Math.round(s.gimbal) + "°"]];
+    if (s.home) {
+      var o = homeOffset(s.lon, s.lat, s.h, s.home);
+      facts.splice(4, 0, ["Height", o.up.toFixed(0) + " m above takeoff"], ["Distance", o.dist.toFixed(0) + " m from takeoff"],
+                         ["Takeoff point", s.home.lat.toFixed(6) + ", " + s.home.lon.toFixed(6)]);
+    }
+    return facts;
+  }
+  function renderShots() {
+    var box = $("shots"), shots = loadShots(); box.innerHTML = "";
+    if (!shots.length) { var n = document.createElement("div"); n.className = "note"; n.textContent = "None yet. Frame a shot and tap Save shot."; box.appendChild(n); return; }
+    shots.forEach(function (s, i) {
+      var row = document.createElement("div"); row.className = "shot";
+      var img = document.createElement("img"); if (s.img) img.src = s.img; img.alt = "";
+      var info = document.createElement("div");
+      var name = document.createElement("b"); name.textContent = s.name;
+      var meta = document.createElement("small"); meta.textContent = Math.round(s.focal) + "mm · " + s.date + " " + hhmm(s.minutes);
+      info.appendChild(name); info.appendChild(meta);
+      var open = document.createElement("button"); open.className = "btn"; open.textContent = "Open";
+      open.onclick = function () { openCard(i); };
+      row.appendChild(img); row.appendChild(info); row.appendChild(open); box.appendChild(row);
+    });
+  }
+  var cardIx = -1;
+  function openCard(i) {
+    var s = loadShots()[i]; if (!s) return;
+    cardIx = i;
+    $("cardImg").hidden = !s.img; if (s.img) $("cardImg").src = s.img;
+    $("cardName").value = s.name;
+    var t = $("cardFacts"); t.innerHTML = "";
+    shotFacts(s).forEach(function (f) {
+      var tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td");
+      a.textContent = f[0]; b.textContent = f[1]; tr.appendChild(a); tr.appendChild(b); t.appendChild(tr);
+    });
+    $("sheet").hidden = true; $("card").hidden = false;
+  }
+  $("cardName").onchange = function () {
+    var all = loadShots(); if (!all[cardIx]) return;
+    all[cardIx].name = this.value.trim() || all[cardIx].name; saveShots(all);
+  };
+  $("cardClose").onclick = function () { $("card").hidden = true; renderShots(); $("sheet").hidden = false; };
+  $("cardDelete").onclick = function () {
+    var all = loadShots(); all.splice(cardIx, 1); saveShots(all);
+    $("card").hidden = true; renderShots(); $("sheet").hidden = false;
+  };
+  $("cardView").onclick = function () {
+    var s = loadShots()[cardIx]; if (!s) return;
+    if (S.speed === "fpv") $("speedBtn").click();   // leave FPV so the shot shows with its own lens and a level horizon
+    S.lon = s.lon; S.lat = s.lat; S.h = s.h; S.heading = s.heading; S.focal = s.focal;
+    if (s.home) setHome(s.home.lon, s.home.lat, s.home.h); else setHome(s.lon / D2R, s.lat / D2R, s.h - 30);
+    setGimbal(clamp(Math.round(s.gimbal), -90, 30));
+    if (s.tz !== undefined) S.tz = s.tz;
+    $("date").value = s.date; $("time").value = s.minutes;
+    buildLenses(); applyLens(); setMode("fly"); applyTime(); buildSunButtons(); $("card").hidden = true;
+  };
+  $("cardShare").onclick = function () {
+    var s = loadShots()[cardIx]; if (!s) return;
+    var text = s.name + "\n" + shotFacts(s).map(function (f) { return f[0] + ": " + f[1]; }).join("\n") + "\nPlanned with Shot Scout · Peacemaker Filmworks";
+    function copy() {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast("Shot details copied"); }, function () { toast("Couldn't share from this browser"); });
+      else toast("Couldn't share from this browser");
+    }
+    if (!navigator.share) { copy(); return; }
+    var send = function (files) {
+      var data = { title: s.name, text: text };
+      if (files && navigator.canShare && navigator.canShare({ files: files })) data.files = files;
+      navigator.share(data).catch(function (e) { if (e && e.name !== "AbortError") copy(); });
+    };
+    if (s.img) {
+      fetch(s.img).then(function (r) { return r.blob(); }).then(function (b) { send([new File([b], "shot.jpg", { type: "image/jpeg" })]); }, function () { send(null); });
+    } else { send(null); }
+  };
+  $("saveBtn").onclick = function () {
+    var st = captureState(), shots = loadShots();
+    grabFrame(function (img) {
+      var s = { name: "Shot " + (shots.length + 1), lon: st.lon, lat: st.lat, h: st.h, heading: st.heading, gimbal: Math.round(st.gimbal), focal: Math.round(st.focal),
+                date: $("date").value, minutes: +$("time").value, tz: S.tz, home: S.mode === "fly" ? S.home : null, img: img };
+      shots.push(s);
+      toast(saveShots(shots) ? "Saved as " + s.name : "Couldn't save: this phone's storage for the app is full");
+      renderShots();
+    });
+  };
+  $("menuBtn").onclick = function () { renderShots(); buildSunButtons(); updateMoveInfo(); $("sheet").hidden = false; };
+  $("closeSheet").onclick = function () { $("sheet").hidden = true; };
+  $("resetTok").onclick = function () { store.del("ionToken"); $("sheet").hidden = true; showGate(); };
+
+  // ---------- go ----------
+  buildLenses(); applyLens(); setNow(); setMode("scout"); updateMoveInfo();
+})();
+</script>
+</body>
+</html>
