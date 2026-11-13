@@ -72,6 +72,19 @@
   #gimbal { position:absolute; left:50%; top:50%; width:200px; height:44px; margin:-22px 0 0 -100px; transform:rotate(-90deg); touch-action:none; accent-color:var(--accent); }
   #gimbalWrap label { position:absolute; left:-40px; right:0; bottom:-22px; text-align:right; font-size:10px; color:var(--dim); }
 
+  /* top-down map */
+  #mini { position:fixed; right:8px; top:calc(env(safe-area-inset-top, 0px) + 104px); width:150px; height:150px; border-radius:14px; overflow:hidden;
+    border:1px solid var(--line); background:#1b1d20; box-shadow:0 6px 24px rgba(0,0,0,.5); touch-action:none; }
+  #mini.big { right:50%; top:50%; width:min(88vw, 62vh); height:min(88vw, 62vh); transform:translate(50%, -50%); z-index:5; }
+  #miniTiles { position:absolute; inset:0; }
+  #miniTiles img { position:absolute; width:256px; height:256px; max-width:none; pointer-events:none; }
+  #miniDrone { position:absolute; left:50%; top:50%; width:0; height:0; }
+  #miniDrone svg { position:absolute; left:-70px; top:-70px; width:140px; height:140px; overflow:visible; }
+  #miniHome { position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:var(--accent); color:#17130a; font:800 11px/20px var(--display); text-align:center; border:1px solid #000; }
+  #miniZoom { position:absolute; left:4px; top:4px; display:flex; gap:4px; }
+  #miniZoom button { width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:rgba(14,15,17,.8); font-weight:700; }
+  #miniCredit { position:absolute; right:0; bottom:0; font-size:9px; color:#222; background:rgba(255,255,255,.75); padding:1px 4px; border-top-left-radius:6px; }
+
   /* clean viewfinder */
   #cleanExit { position:fixed; right:8px; top:calc(env(safe-area-inset-top, 0px) + 8px); opacity:.55; font-size:12px; padding:7px 10px; }
   body.clean #searchRow, body.clean #lenses, body.clean #actions, body.clean #gimbalWrap, body.clean #cross, body.clean .stick span { display:none !important; }
@@ -149,6 +162,14 @@
   <div id="hud"></div>
 </div>
 <button class="btn" id="cleanExit" hidden>Show controls</button>
+<div id="mini" hidden>
+  <div id="miniTiles"></div>
+  <div id="miniHome" hidden>H</div>
+  <div id="miniDrone"><svg viewBox="-70 -70 140 140"><path id="miniFov" fill="rgba(244,194,13,.28)" stroke="rgba(244,194,13,.9)" stroke-width="1"/>
+    <path d="M0,-15 L10,11 L0,5 L-10,11 Z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+  <div id="miniZoom"><button id="miniOut" aria-label="Zoom map out">−</button><button id="miniIn" aria-label="Zoom map in">+</button></div>
+  <div id="miniCredit">© OpenStreetMap</div>
+</div>
 
 <div id="gimbalWrap" hidden>
   <input id="gimbal" type="range" min="-90" max="30" step="1" value="-15" aria-label="Gimbal tilt">
@@ -157,7 +178,7 @@
 
 <div id="bottom">
   <div id="sticks" hidden>
-    <div class="stick" id="stickL"><span>UP / DOWN · TURN</span><i></i></div>
+    <div class="stick" id="stickL"><span id="stickLLbl">UP / DOWN · TURN</span><i></i></div>
     <div class="stick" id="stickR"><span id="stickRLbl">FORWARD · SIDEWAYS</span><i></i></div>
   </div>
   <div id="actions">
@@ -165,8 +186,9 @@
     <button class="btn" id="resumeBtn" hidden>Resume flight</button>
     <button class="btn" id="scoutBtn" hidden>Scout</button>
     <button class="btn" id="homeBtn" hidden>Home</button>
-    <button class="btn" id="speedBtn" hidden>Normal</button>
+    <button class="btn" id="speedBtn" hidden>Sport</button>
     <button class="btn" id="saveBtn">Save shot</button>
+    <button class="btn" id="mapBtn">Map</button>
     <button class="btn" id="cleanBtn">Clean view</button>
     <button class="btn" id="menuBtn">Plan</button>
   </div>
@@ -308,8 +330,42 @@
     }
     return ev;
   }
+  // ---------- FPV (acro) physics: body axes are x = right, y = forward, z = up; world is east, north, up ----------
+  var FPV = { G: 9.81, THRUST: 9.81 * 3.2, DRAG2: 0.008, DRAG1: 0.08, PITCH: 280, ROLL: 280, YAW: 190 };
+  FPV.HOVER = FPV.G / FPV.THRUST;
+  function qMul(a, b) {
+    return [a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3], a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+            a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1], a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]];
+  }
+  function qRot(q, v) {
+    var w = q[0], x = q[1], y = q[2], z = q[3];
+    var tx = 2 * (y * v[2] - z * v[1]), ty = 2 * (z * v[0] - x * v[2]), tz = 2 * (x * v[1] - y * v[0]);
+    return [v[0] + w * tx + (y * tz - z * ty), v[1] + w * ty + (z * tx - x * tz), v[2] + w * tz + (x * ty - y * tx)];
+  }
+  function qLevel(headingRad) { return [Math.cos(-headingRad / 2), 0, 0, Math.sin(-headingRad / 2)]; }
+  function qHeading(q) { var f = qRot(q, [0, 1, 0]); return (Math.atan2(f[0], f[1]) + 2 * Math.PI) % (2 * Math.PI); }
+  // One time step. st = { q, v }; inp = { pitch, roll, yaw in -1..1, throttle 0..1 }. Returns metres moved [east, north, up].
+  function fpvStep(st, inp, dt) {
+    var k = Math.PI / 180;
+    var wx = -inp.pitch * FPV.PITCH * k, wy = inp.roll * FPV.ROLL * k, wz = -inp.yaw * FPV.YAW * k;   // no self-levelling: sticks set rotation rates
+    var mag = Math.hypot(wx, wy, wz), ang = mag * dt;
+    if (ang > 1e-9) {
+      var s = Math.sin(ang / 2) / mag, q = qMul(st.q, [Math.cos(ang / 2), wx * s, wy * s, wz * s]);
+      var n = Math.hypot(q[0], q[1], q[2], q[3]); st.q = [q[0] / n, q[1] / n, q[2] / n, q[3] / n];
+    }
+    var up = qRot(st.q, [0, 0, 1]), v = st.v, speed = Math.hypot(v[0], v[1], v[2]);
+    var T = inp.throttle * FPV.THRUST, d = FPV.DRAG2 * speed + FPV.DRAG1;       // thrust pushes along the airframe's up; gravity always pulls down
+    v[0] += (up[0] * T - v[0] * d) * dt; v[1] += (up[1] * T - v[1] * d) * dt; v[2] += (up[2] * T - FPV.G - v[2] * d) * dt;
+    return [v[0] * dt, v[1] * dt, v[2] * dt];
+  }
+  // Web-map tile maths: pixel position of a point at a zoom level.
+  function worldPx(lonDeg, latDeg, z) {
+    var size = 256 * Math.pow(2, z), lat = latDeg * Math.PI / 180;
+    return { x: (lonDeg + 180) / 360 * size, y: (1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2 * size };
+  }
   if (typeof module !== "undefined" && typeof window === "undefined") {
-    module.exports = { sunPosition: sunPosition, sunEvents: sunEvents, instant: instant, tzText: tzText, hhmm: hhmm }; return;
+    module.exports = { sunPosition: sunPosition, sunEvents: sunEvents, instant: instant, tzText: tzText, hhmm: hhmm,
+                       FPV: FPV, fpvStep: fpvStep, qLevel: qLevel, qHeading: qHeading, qRot: qRot, worldPx: worldPx }; return;
   }
 
   // ---------- splash ----------
@@ -339,16 +395,17 @@
   var R = 6378137, D2R = Math.PI / 180, TWO_PI = 2 * Math.PI;
   var deviceTz = -new Date().getTimezoneOffset();
   var S = { mode: "scout", lon: 0, lat: 0, h: 0, heading: 0, gimbal: -15, gimbalT: -15, bank: 0, nose: 0, flown: false,
-            vf: 0, vr: 0, vu: 0, vy: 0, home: null, focal: 24, prevFocal: 24, aspectIx: 0, speed: "normal", tz: deviceTz,
+            vf: 0, vr: 0, vu: 0, vy: 0, home: null, focal: 24, prevFocal: 24, aspectIx: 0, speed: "sport", tz: deviceTz, hfov: 1,
             sunPath: false, sunCenter: null, moveA: null, moveB: null, playT: 0, playDur: 10 };
   var SPEEDS = { cine:   { h: 3,  v: 1.5, y: 20,  label: "Cine" },
                  normal: { h: 10, v: 4,   y: 60,  label: "Normal" },
-                 sport:  { h: 19, v: 6,   y: 90,  label: "Sport" },
+                 sport:  { h: 19, v: 8,   y: 90,  label: "Sport" },
                  fpv:    { h: 32, v: 12,  y: 150, label: "FPV" } };
   var ASPECTS = [[16 / 9, "16:9"], [2.39, "2.39:1"], [4 / 3, "4:3"], [9 / 16, "9:16"]];
   var LIMIT_H = 122, LIMIT_D = 500;     // metres: common legal ceiling, and a rough line-of-sight guide
   var input = { lx: 0, ly: 0, rx: 0, ry: 0 };
   var keys = {};
+  var F = { q: [1, 0, 0, 0], v: [0, 0, 0], ground: null, sampleT: 0, landed: false };   // FPV airframe state
 
   // ---------- viewer ----------
   Cesium.Ion.defaultAccessToken = token;
@@ -401,7 +458,7 @@
     // 43.27 mm is the full-frame diagonal; the frame guide shows exactly what that lens sees.
     var tanHalfDiag = 43.27 / (2 * S.focal);
     var tanHalfW = tanHalfDiag * A / Math.sqrt(A * A + 1);
-    var focalPx = (fw / 2) / tanHalfW;
+    var focalPx = (fw / 2) / tanHalfW; S.hfov = 2 * Math.atan(tanHalfW);
     var fov = 2 * Math.atan((Math.max(w, h) / 2) / focalPx);
     if (camera.frustum && camera.frustum.fov !== undefined) camera.frustum.fov = Math.min(fov, 175 * D2R);
   }
@@ -545,7 +602,15 @@
   };
 
   // ---------- modes ----------
-  function setGimbal(deg) { S.gimbal = S.gimbalT = deg; $("gimbal").value = deg; $("gimbalLbl").textContent = "tilt " + Math.round(deg) + "°"; }
+  function isFpv() { return S.speed === "fpv"; }
+  function gimbalText(deg) { return (isFpv() ? "cam +" : "tilt ") + Math.round(deg) + "°"; }
+  function setGimbal(deg) { S.gimbal = S.gimbalT = deg; $("gimbal").value = deg; $("gimbalLbl").textContent = gimbalText(deg); }
+  // Put the FPV airframe level at the current heading, stationary, with the throttle parked at hover.
+  function fpvReset(keepSpeed) {
+    F.q = qLevel(S.heading); F.landed = false; F.ground = null; F.sampleT = 0;
+    F.v = keepSpeed ? [S.vf * Math.sin(S.heading) + S.vr * Math.cos(S.heading), S.vf * Math.cos(S.heading) - S.vr * Math.sin(S.heading), S.vu] : [0, 0, 0];
+    stickL.setY(FPV.HOVER * 2 - 1);
+  }
   function setMode(m) {
     S.mode = m;
     var fly = m === "fly", play = m === "play", air = fly || play;
@@ -554,7 +619,7 @@
     $("searchRow").hidden = air; $("cross").hidden = air;
     $("takeoffBtn").hidden = air; $("resumeBtn").hidden = air || !S.flown;
     $("scoutBtn").hidden = !fly; $("homeBtn").hidden = !fly; $("speedBtn").hidden = !fly;
-    if (fly) { S.flown = true; S.vf = S.vr = S.vu = S.vy = 0; }
+    if (fly) { S.flown = true; S.vf = S.vr = S.vu = S.vy = 0; if (isFpv()) fpvReset(false); }
     if (!air) { S.bank = 0; S.nose = 0; }
   }
   var homeEntity = null;
@@ -579,22 +644,28 @@
   $("homeBtn").onclick = function () {
     if (!S.home) return;
     S.lon = S.home.lon * D2R; S.lat = S.home.lat * D2R; S.h = Math.max(S.h, S.home.h + 10);
-    S.vf = S.vr = S.vu = 0; toast("Back over the takeoff point");
+    S.vf = S.vr = S.vu = 0; if (isFpv()) fpvReset(false); toast("Back over the takeoff point");
   };
   $("speedBtn").onclick = function () {
     var order = ["cine", "normal", "sport", "fpv"], was = S.speed;
     S.speed = order[(order.indexOf(S.speed) + 1) % order.length];
     this.textContent = SPEEDS[S.speed].label; this.classList.toggle("on", S.speed === "fpv");
+    var g = $("gimbal");
     if (S.speed === "fpv") {
-      S.prevFocal = S.focal; S.focal = 14; setGimbal(10);
-      $("stickRLbl").textContent = "FORWARD · BANK";
-      toast("FPV: wide lens, banked turns, more speed and drift");
+      S.prevFocal = S.focal; S.focal = 14;
+      g.min = 0; g.max = 60; setGimbal(25);
+      $("stickLLbl").textContent = "THROTTLE · YAW"; $("stickRLbl").textContent = "PITCH · ROLL";
+      stickL.hold(true); fpvReset(true);
+      toast("FPV acro: no self-levelling, and it falls unless you hold throttle. The left stick stays where you leave it.", 4200);
     } else if (was === "fpv") {
-      S.focal = S.prevFocal; setGimbal(-15); $("stickRLbl").textContent = "FORWARD · SIDEWAYS";
+      S.focal = S.prevFocal; S.heading = qHeading(F.q); S.vf = S.vr = S.vu = S.vy = 0;
+      g.min = -90; g.max = 30; setGimbal(-15);
+      $("stickLLbl").textContent = "UP / DOWN · TURN"; $("stickRLbl").textContent = "FORWARD · SIDEWAYS";
+      stickL.hold(false);
     }
     buildLenses(); applyLens();
   };
-  $("gimbal").oninput = function () { S.gimbalT = +this.value; $("gimbalLbl").textContent = "tilt " + S.gimbalT + "°"; };
+  $("gimbal").oninput = function () { S.gimbalT = +this.value; $("gimbalLbl").textContent = gimbalText(S.gimbalT); };
 
   // ---------- clean viewfinder ----------
   function setClean(on) { document.body.classList.toggle("clean", on); $("cleanExit").hidden = !on; }
@@ -603,20 +674,22 @@
 
   // ---------- sticks + keyboard ----------
   function makeStick(el, onMove) {
-    var knob = el.querySelector("i"), id = null, max = 44;
+    var knob = el.querySelector("i"), id = null, max = 44, holdY = false, lastY = 0;
+    function place(x, y) { knob.style.transform = "translate(" + x * max + "px," + -y * max + "px)"; lastY = y; onMove(x, y); }
     function set(e) {
       var r = el.getBoundingClientRect();
       var dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
-      var len = Math.hypot(dx, dy); if (len > max) { dx *= max / len; dy *= max / len; }
-      knob.style.transform = "translate(" + dx + "px," + dy + "px)";
-      onMove(dx / max, -dy / max);
+      if (holdY) { dx = Math.max(-max, Math.min(max, dx)); dy = Math.max(-max, Math.min(max, dy)); }   // square travel so full throttle is reachable while yawing
+      else { var len = Math.hypot(dx, dy); if (len > max) { dx *= max / len; dy *= max / len; } }
+      place(dx / max, -dy / max);
     }
-    function end(e) { if (e.pointerId !== id) return; id = null; knob.style.transform = ""; onMove(0, 0); }
+    function end(e) { if (e.pointerId !== id) return; id = null; place(0, holdY ? lastY : 0); }
     el.addEventListener("pointerdown", function (e) { id = e.pointerId; try { el.setPointerCapture(id); } catch (x) {} set(e); e.preventDefault(); });
     el.addEventListener("pointermove", function (e) { if (e.pointerId === id) set(e); });
     el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+    return { hold: function (on) { holdY = on; if (!on) place(0, 0); }, setY: function (y) { place(0, y); } };
   }
-  makeStick($("stickL"), function (x, y) { input.lx = x; input.ly = y; });
+  var stickL = makeStick($("stickL"), function (x, y) { input.lx = x; input.ly = y; });
   makeStick($("stickR"), function (x, y) { input.rx = x; input.ry = y; });
   window.addEventListener("keydown", function (e) { if (e.target.tagName !== "INPUT") keys[e.key.toLowerCase()] = true; });
   window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
@@ -626,7 +699,7 @@
 
   // ---------- camera moves ----------
   function captureState() {
-    if (S.mode === "fly") return { lon: S.lon, lat: S.lat, h: S.h, heading: S.heading, gimbal: S.gimbal, focal: S.focal };
+    if (S.mode === "fly" && !isFpv()) return { lon: S.lon, lat: S.lat, h: S.h, heading: S.heading, gimbal: S.gimbal, focal: S.focal };
     var c = camera.positionCartographic;
     return { lon: c.longitude, lat: c.latitude, h: c.height, heading: camera.heading, gimbal: camera.pitch / D2R, focal: S.focal };
   }
@@ -675,7 +748,8 @@
     var now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.mode === "play") { stepPlay(dt); return; }
     if (S.mode !== "fly") return;
-    var sp = SPEEDS[S.speed], fpv = S.speed === "fpv";
+    if (isFpv()) { stepFpv(dt, now); return; }
+    var sp = SPEEDS[S.speed], fpv = false;
     var tu = curve(input.ly) + axis("w", "s"), ty = curve(input.lx) + axis("d", "a");
     var tf = curve(input.ry) + axis("arrowup", "arrowdown"), tr = curve(input.rx) + axis("arrowright", "arrowleft");
     var k = Math.min(1, dt * (fpv ? 1.4 : 3.2));    // FPV carries more momentum
@@ -696,6 +770,75 @@
                      orientation: { heading: S.heading, pitch: clamp(S.gimbal * D2R + S.nose, -Math.PI / 2, Math.PI / 2 - 0.01), roll: S.bank } });
   });
 
+  // ---------- FPV flight ----------
+  var scratchM = new Cesium.Matrix4(), scratchD = new Cesium.Cartesian3(), scratchU = new Cesium.Cartesian3();
+  function stepFpv(dt, now) {
+    var inp = { pitch: curve(input.ry), roll: curve(input.rx), yaw: curve(input.lx), throttle: clamp((input.ly + 1) / 2, 0, 1) };
+    var d = fpvStep(F, inp, dt);
+    S.lat += d[1] / R; S.lon += d[0] / (R * Math.cos(S.lat)); S.h += d[2];
+    // ground: sample the surface under the drone a few times a second and stop it falling through
+    if (now - F.sampleT > 250) {
+      F.sampleT = now;
+      try {
+        var g = scene.sampleHeight(Cesium.Cartographic.fromRadians(S.lon, S.lat));
+        F.ground = (isFinite(g) && g < S.h + 4) ? g : (isFinite(g) ? F.ground : null);   // ignore surfaces well above us (bridges, overhangs)
+      } catch (e) { F.ground = null; }
+    }
+    if (F.ground !== null && S.h < F.ground + 0.5) {
+      S.h = F.ground + 0.5; if (F.v[2] < 0) F.v[2] = 0;
+      var fr = 1 - Math.min(1, dt * 5); F.v[0] *= fr; F.v[1] *= fr;
+      if (!F.landed) { F.landed = true; toast("On the ground. Add throttle to lift off."); }
+    } else if (F.ground === null || S.h > F.ground + 1.5) { F.landed = false; }
+    S.heading = qHeading(F.q); S.vf = Math.hypot(F.v[0], F.v[1]); S.vr = 0; S.vu = F.v[2];
+    S.gimbal += (S.gimbalT - S.gimbal) * Math.min(1, dt * 5);
+    // camera is fixed to the airframe, tilted up by the cam angle
+    var t = S.gimbal * D2R, fw = qRot(F.q, [0, 1, 0]), up = qRot(F.q, [0, 0, 1]), ct = Math.cos(t), st = Math.sin(t);
+    var pos = Cesium.Cartesian3.fromRadians(S.lon, S.lat, S.h);
+    Cesium.Transforms.eastNorthUpToFixedFrame(pos, Cesium.Ellipsoid.WGS84, scratchM);
+    Cesium.Matrix4.multiplyByPointAsVector(scratchM, new Cesium.Cartesian3(fw[0] * ct + up[0] * st, fw[1] * ct + up[1] * st, fw[2] * ct + up[2] * st), scratchD);
+    Cesium.Matrix4.multiplyByPointAsVector(scratchM, new Cesium.Cartesian3(up[0] * ct - fw[0] * st, up[1] * ct - fw[1] * st, up[2] * ct - fw[2] * st), scratchU);
+    camera.setView({ destination: pos, orientation: { direction: Cesium.Cartesian3.normalize(scratchD, scratchD), up: Cesium.Cartesian3.normalize(scratchU, scratchU) } });
+  }
+
+  // ---------- top-down map ----------
+  var mini = { on: false, z: 16, tiles: {} };
+  function drawMini() {
+    if (!mini.on) return;
+    var box = $("mini"), W = box.clientWidth, H = box.clientHeight, c = camera.positionCartographic;
+    var lonD = c.longitude / D2R, latD = clamp(c.latitude / D2R, -85, 85), p = worldPx(lonD, latD, mini.z);
+    var ox = p.x - W / 2, oy = p.y - H / 2, n = Math.pow(2, mini.z), layer = $("miniTiles"), seen = {};
+    for (var tx = Math.floor(ox / 256); tx <= Math.floor((ox + W) / 256); tx++) {
+      for (var ty = Math.floor(oy / 256); ty <= Math.floor((oy + H) / 256); ty++) {
+        if (ty < 0 || ty >= n) continue;
+        var key = mini.z + "/" + (((tx % n) + n) % n) + "/" + ty, id = key + "@" + tx, img = mini.tiles[id];
+        if (!img) {
+          img = document.createElement("img"); img.alt = ""; img.draggable = false;
+          img.src = "https://tile.openstreetmap.org/" + key + ".png";
+          layer.appendChild(img); mini.tiles[id] = img;
+        }
+        img.style.left = Math.round(tx * 256 - ox) + "px"; img.style.top = Math.round(ty * 256 - oy) + "px"; seen[id] = true;
+      }
+    }
+    Object.keys(mini.tiles).forEach(function (id) { if (!seen[id]) { layer.removeChild(mini.tiles[id]); delete mini.tiles[id]; } });
+    var hd = camera.heading;
+    $("miniDrone").style.transform = "rotate(" + (hd / D2R).toFixed(1) + "deg)";
+    var a = Math.min(S.hfov / 2, 1.45), r = 62, sx = (r * Math.sin(a)).toFixed(1), sy = (-r * Math.cos(a)).toFixed(1);
+    $("miniFov").setAttribute("d", "M0,0 L-" + sx + "," + sy + " A" + r + "," + r + " 0 0 1 " + sx + "," + sy + " Z");
+    var hm = $("miniHome");
+    if (S.home) {
+      var hp = worldPx(S.home.lon, S.home.lat, mini.z), hx = hp.x - ox, hy = hp.y - oy;
+      hm.hidden = !(hx > 0 && hx < W && hy > 0 && hy < H); hm.style.left = hx + "px"; hm.style.top = hy + "px";
+    } else { hm.hidden = true; }
+  }
+  setInterval(drawMini, 150);
+  $("mapBtn").onclick = function () {
+    mini.on = !mini.on; $("mini").hidden = !mini.on; $("mini").classList.remove("big"); this.classList.toggle("on", mini.on); drawMini();
+  };
+  $("mini").addEventListener("click", function (e) { if (e.target.tagName === "BUTTON") return; this.classList.toggle("big"); drawMini(); });
+  function miniZoom(dz) { mini.z = clamp(mini.z + dz, 12, 19); drawMini(); }
+  $("miniIn").onclick = function () { miniZoom(1); };
+  $("miniOut").onclick = function () { miniZoom(-1); };
+
   // ---------- HUD ----------
   function compass(deg) { return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(deg / 45) % 8]; }
   function homeOffset(lonRad, latRad, h, home) {
@@ -708,7 +851,8 @@
     if ((S.mode === "fly" || S.mode === "play") && S.home) {
       var o = homeOffset(S.lon, S.lat, S.h, S.home), hd = S.heading / D2R;
       $("hud").innerHTML = "H <b" + (o.up > LIMIT_H ? ' class="warn"' : "") + ">" + o.up.toFixed(0) + " m</b> · D <b" + (o.dist > LIMIT_D ? ' class="warn"' : "") + ">" + o.dist.toFixed(0) +
-        " m</b> · <b>" + Math.hypot(S.vf, S.vr).toFixed(1) + " m/s</b> · hdg <b>" + compass(hd) + " " + Math.round(hd) + "°</b><br>" + lens + " · " + sun +
+        " m</b> · <b>" + (isFpv() ? (Math.hypot(F.v[0], F.v[1], F.v[2]) * 3.6).toFixed(0) + " km/h" : Math.hypot(S.vf, S.vr).toFixed(1) + " m/s") + "</b> · hdg <b>" + compass(hd) + " " + Math.round(hd) + "°</b><br>" +
+        (isFpv() && S.mode === "fly" ? "thr <b>" + Math.round(clamp((input.ly + 1) / 2, 0, 1) * 100) + "%</b> · " : "") + lens + " · " + sun +
         (o.up > LIMIT_H ? '<br><b class="warn">Above ' + LIMIT_H + " m</b>" : "");
     } else {
       $("hud").innerHTML = "Scouting · " + lens + " · " + sun;
