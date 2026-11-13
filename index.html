@@ -38,6 +38,9 @@
   #cross { position:fixed; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; pointer-events:none; border:2px solid var(--accent); border-radius:50%; }
   #cross::after { content:""; position:absolute; left:50%; top:50%; width:4px; height:4px; margin:-2px; background:var(--accent); border-radius:50%; }
 
+  #mstick { position:fixed; width:180px; height:180px; margin:-90px 0 0 -90px; border:1px solid rgba(255,255,255,.35); border-radius:50%; pointer-events:none; }
+  #mstick i { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px; border-radius:50%; background:var(--accent); }
+
   /* top */
   #top { position:fixed; left:0; right:0; top:0; padding:calc(env(safe-area-inset-top, 0px) + 8px) 8px 0; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
   #top > * { pointer-events:auto; }
@@ -152,6 +155,7 @@
 <div id="dark" class="fx"></div>
 <div id="frame"></div>
 <div id="cross"></div>
+<div id="mstick" hidden><i></i></div>
 
 <div id="top">
   <div id="searchRow">
@@ -238,7 +242,7 @@
   <div id="shots"></div>
 
   <h3>Setup</h3>
-  <div class="row"><button class="btn" id="resetTok">Change access token</button></div>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.6</span></div>
 </div>
 
 <div id="card" hidden>
@@ -271,7 +275,7 @@
   <p class="by">Created by <b>Patrick Weir</b></p>
   <div class="rule"></div>
   <div class="co">Peacemaker Filmworks</div>
-  <div class="tap">TAP TO START</div>
+  <div class="tap">TAP TO START · VERSION 2.6</div>
 </div>
 <div id="toast"></div>
 
@@ -445,8 +449,8 @@
     } catch (e) {}
   }
 
-  camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-123.152, 49.312, 650),
-                   orientation: { heading: 135 * D2R, pitch: -28 * D2R, roll: 0 } });
+  camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-123.105, 49.254, 1250),
+                   orientation: { heading: 338 * D2R, pitch: -20 * D2R, roll: 0 } });
 
   Cesium.createGooglePhotorealistic3DTileset().then(function (ts) {
     scene.primitives.add(ts);
@@ -730,28 +734,31 @@
     if (t.tagName === "INPUT") t.blur();
   });
   window.addEventListener("blur", function () { keys = {}; });
-  // Mouse wheel tilts the camera while flying: roll up to tilt up, down to tilt down.
+  // Mouse wheel tilts the camera while flying: roll down to tilt up, up to tilt down.
   window.addEventListener("wheel", function (e) {
     if (S.mode !== "fly" || (e.target.closest && e.target.closest("#sheet, #card, #mini"))) return;
     e.preventDefault();
     var gs = $("gimbal"), px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;      // some mice report lines, not pixels
-    S.gimbalT = clamp(S.gimbalT - clamp(px, -300, 300) * 0.04, +gs.min, +gs.max);
+    S.gimbalT = clamp(S.gimbalT + clamp(px, -300, 300) * 0.04, +gs.min, +gs.max);
     gs.value = S.gimbalT; $("gimbalLbl").textContent = gimbalText(S.gimbalT);
   }, { passive: false });
-  // Mouse drag on any empty part of the view also tilts the camera: drag down to tilt up.
+  // Right mouse button, held anywhere on the view, is the right stick: push away to go forward, pull back to reverse, left and right to slide.
   (function () {
-    var dragId = null, lastY = 0, map = $("map");
+    var dragId = null, ox = 0, oy = 0, REACH = 90, map = $("map"), ring = $("mstick"), dot = ring.firstElementChild;
+    window.addEventListener("contextmenu", function (e) { if (S.mode === "fly" || dragId !== null) e.preventDefault(); });
     map.addEventListener("pointerdown", function (e) {
-      if (S.mode !== "fly" || e.pointerType !== "mouse" || e.button !== 0) return;
-      dragId = e.pointerId; lastY = e.clientY; document.body.style.cursor = "ns-resize"; e.preventDefault();
+      if (S.mode !== "fly" || e.pointerType !== "mouse" || e.button !== 2) return;
+      dragId = e.pointerId; ox = e.clientX; oy = e.clientY; e.preventDefault();
+      try { map.setPointerCapture(dragId); } catch (x) {}
+      ring.hidden = false; ring.style.left = ox + "px"; ring.style.top = oy + "px"; dot.style.transform = "";
     });
     window.addEventListener("pointermove", function (e) {
       if (e.pointerId !== dragId) return;
-      var gs = $("gimbal"), dy = e.clientY - lastY; lastY = e.clientY;
-      S.gimbalT = clamp(S.gimbalT + dy * 0.2, +gs.min, +gs.max);   // drag down tilts up, like pulling the view toward you
-      gs.value = S.gimbalT; $("gimbalLbl").textContent = gimbalText(S.gimbalT);
+      var dx = clamp(e.clientX - ox, -REACH, REACH), dy = clamp(e.clientY - oy, -REACH, REACH);
+      dot.style.transform = "translate(" + dx + "px," + dy + "px)";
+      input.rx = dx / REACH; input.ry = -dy / REACH;
     });
-    function stop(e) { if (e.pointerId === dragId) { dragId = null; document.body.style.cursor = ""; } }
+    function stop(e) { if (e.pointerId !== dragId) return; dragId = null; input.rx = 0; input.ry = 0; ring.hidden = true; }
     window.addEventListener("pointerup", stop); window.addEventListener("pointercancel", stop);
   })();
   window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
