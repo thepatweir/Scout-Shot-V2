@@ -257,7 +257,7 @@
   <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
 
   <h3>Setup</h3>
-  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.14</span></div>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.15</span></div>
 </div>
 
 <div id="moveSheet" class="sheet" hidden>
@@ -304,7 +304,7 @@
   <p class="by">Created by <b>Patrick Weir</b></p>
   <div class="rule"></div>
   <div class="co">Peacemaker Filmworks</div>
-  <div class="tap">TAP TO START · VERSION 2.14</div>
+  <div class="tap">TAP TO START · VERSION 2.15</div>
 </div>
 <div id="toast"></div>
 
@@ -929,16 +929,16 @@
 
   // ---------- game controllers and USB radios ----------
   // A saved setup is { thr, yaw, pit, rol }, each [axis number, +1 or -1], so that +1 means up / right / forward.
-  var pad = { cfg: {}, wizard: null, seen: "" };
+  var gpad = { cfg: {}, wizard: null };
   function padList() { try { return Array.prototype.filter.call(navigator.getGamepads ? navigator.getGamepads() : [], function (g) { return g && g.connected; }); } catch (e) { return []; } }
   function padConfig(gp) {
-    if (pad.cfg[gp.id] === undefined) { try { pad.cfg[gp.id] = JSON.parse(store.get("pad:" + gp.id) || "null"); } catch (e) { pad.cfg[gp.id] = null; } }
-    if (pad.cfg[gp.id]) return pad.cfg[gp.id];
+    if (gpad.cfg[gp.id] === undefined) { try { gpad.cfg[gp.id] = JSON.parse(store.get("pad:" + gp.id) || "null"); } catch (e) { gpad.cfg[gp.id] = null; } }
+    if (gpad.cfg[gp.id]) return gpad.cfg[gp.id];
     return gp.mapping === "standard" ? { thr: [1, -1], yaw: [0, 1], pit: [3, -1], rol: [2, 1] } : null;   // ordinary gamepads work without setup
   }
   // Current stick positions from the first usable controller, or null to use the on-screen sticks.
   function readPad() {
-    if (pad.wizard) return null;
+    if (gpad.wizard) return null;
     var list = padList();
     for (var i = 0; i < list.length; i++) {
       var gp = list[i], c = padConfig(gp);
@@ -952,7 +952,7 @@
   function padStatus() {
     var list = padList(), el = $("padStatus");
     if (!list.length) { el.textContent = "No controller detected. Plug one in, then move a stick or press a button on it."; return; }
-    var gp = list[0], saved = !!pad.cfg[gp.id], ok = !!padConfig(gp);
+    var gp = list[0], saved = !!gpad.cfg[gp.id], ok = !!padConfig(gp);
     el.textContent = "Connected: " + gp.id.slice(0, 60) + (saved ? " \u00b7 using your stick setup" : ok ? " \u00b7 standard layout, ready to fly" : " \u00b7 tap Set up sticks to tell the app which stick is which");
   }
   setInterval(padStatus, 1000);
@@ -963,14 +963,14 @@
   var PAD_STEPS = [["thr", "Push THROTTLE all the way up and hold it"], ["yaw", "Push YAW all the way right and hold it"],
                    ["pit", "Push PITCH all the way forward and hold it"], ["rol", "Push ROLL all the way right and hold it"]];
   function padWizardEnd(msg) {
-    if (pad.wizard) clearInterval(pad.wizard.timer);
-    pad.wizard = null; $("padStep").hidden = true; if (msg) toast(msg, 3600); padStatus();
+    if (gpad.wizard) clearInterval(gpad.wizard.timer);
+    gpad.wizard = null; $("padStep").hidden = true; if (msg) toast(msg, 3600); padStatus();
   }
   $("padSetup").onclick = function () {
     var list = padList();
     if (!list.length) { toast("No controller detected yet. Plug it in and move a stick first."); return; }
-    if (pad.wizard) { padWizardEnd("Setup cancelled"); return; }
-    var id = list[0].id, w = pad.wizard = { step: 0, cfg: {}, used: {}, base: null, wait: 12, hold: 0, idle: 0 };
+    if (gpad.wizard) { padWizardEnd("Setup cancelled"); return; }
+    var id = list[0].id, w = gpad.wizard = { step: 0, cfg: {}, used: {}, base: null, wait: 12, hold: 0, idle: 0 };
     $("padStep").hidden = false; $("padStep").textContent = "Let go of both sticks\u2026";
     w.timer = setInterval(function () {
       var gp = padList().filter(function (g) { return g.id === id; })[0];
@@ -988,7 +988,7 @@
         if (++w.hold >= 6) {                    // held for about a third of a second
           w.cfg[PAD_STEPS[w.step][0]] = [best, bestD > 0 ? 1 : -1]; w.used[best] = true; w.hold = 0; w.idle = 0;
           if (++w.step >= PAD_STEPS.length) {
-            pad.cfg[id] = w.cfg; store.set("pad:" + id, JSON.stringify(w.cfg));
+            gpad.cfg[id] = w.cfg; store.set("pad:" + id, JSON.stringify(w.cfg));
             padWizardEnd("Controller set up. You're ready to fly with it."); return;
           }
           w.wait = 16; $("padStep").textContent = "Got it. Let go\u2026";
@@ -997,7 +997,7 @@
     }, 50);
   };
   $("padReset").onclick = function () {
-    padList().forEach(function (g) { store.del("pad:" + g.id); pad.cfg[g.id] = null; });
+    padList().forEach(function (g) { store.del("pad:" + g.id); gpad.cfg[g.id] = null; });
     padWizardEnd("Stick setup forgotten");
   };
 
