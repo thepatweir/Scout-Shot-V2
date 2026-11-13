@@ -55,7 +55,9 @@
   .btn[disabled] { opacity:.4; }
   .btn small { display:block; font-size:10px; color:var(--dim); font-weight:400; }
   .btn.on small { color:inherit; }
-  #lenses { display:flex; gap:6px; overflow-x:auto; touch-action:pan-x; scrollbar-width:none; }
+  #lensRow { display:flex; gap:6px; align-items:center; }
+  #menuBtn { padding:7px 9px; line-height:0; flex:none; }
+  #lenses { display:flex; gap:6px; overflow-x:auto; touch-action:pan-x; scrollbar-width:none; flex:1; min-width:0; }
   #lenses::-webkit-scrollbar { display:none; }
   #lenses .btn { padding:7px 11px; font-family:var(--display); font-weight:800; font-size:12px; letter-spacing:.02em; }
   #hud { align-self:flex-start; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:7px 10px; font-size:12px; color:var(--dim); pointer-events:none;
@@ -90,9 +92,11 @@
 
   #pathStop { position:fixed; left:50%; top:calc(env(safe-area-inset-top, 0px) + 8px); transform:translateX(-50%); z-index:6; background:#c62828; border-color:#ff6b5e; color:#fff; font-weight:700; }
 
+  #playBar { position:fixed; left:50%; top:calc(env(safe-area-inset-top, 0px) + 8px); transform:translateX(-50%); z-index:6; display:flex; gap:6px; }
+
   /* clean viewfinder */
   #cleanExit { position:fixed; right:8px; top:calc(env(safe-area-inset-top, 0px) + 8px); opacity:.55; font-size:12px; padding:7px 10px; }
-  body.clean #searchRow, body.clean #lenses, body.clean #actions, body.clean #gimbalWrap, body.clean #cross, body.clean .stick span { display:none !important; }
+  body.clean #searchRow, body.clean #lensRow, body.clean #actions, body.clean #gimbalWrap, body.clean #cross, body.clean .stick span { display:none !important; }
   body.clean #sticks { opacity:.16; }
   body.clean #hud { background:none; border-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; text-shadow:0 1px 3px #000; }
 
@@ -168,11 +172,20 @@
     <input id="q" type="search" placeholder="Search a place, or lat, lon" autocomplete="off" enterkeyhint="search">
     <button class="btn go" id="goBtn">Go</button>
   </div>
-  <div id="lenses"></div>
+  <div id="lensRow">
+    <div id="lenses"></div>
+    <button class="btn" id="menuBtn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.3-.9-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 0 0 2.6-1.5l2.3.9 2-3.4z"/></svg></button>
+  </div>
   <div id="hud"></div>
 </div>
 <button class="btn" id="cleanExit" hidden>Show controls</button>
 <button class="btn" id="pathStop" hidden>Finish path</button>
+<div id="playBar" hidden>
+  <button class="btn" id="playCancel">Cancel move</button>
+  <button class="btn" id="playToStart" hidden>Back to start</button>
+  <button class="btn" id="playStay" hidden>Stay here</button>
+  <button class="btn go" id="playResume" hidden>Keep playing</button>
+</div>
 <div id="mini" hidden>
   <div id="miniTiles"></div>
   <div id="miniHome" hidden>H</div>
@@ -201,12 +214,12 @@
     <button class="btn" id="movesBtn">Moves</button>
     <button class="btn" id="mapBtn">Map</button>
     <button class="btn" id="cleanBtn">Clean view</button>
-    <button class="btn" id="menuBtn">Plan</button>
   </div>
 </div>
 
 <div id="sheet" class="sheet" hidden>
   <button class="btn" id="closeSheet">Close</button>
+  <h3 style="font-size:14px;color:var(--ink)">Settings</h3>
   <h3>Time of day</h3>
   <div class="row">
     <input id="date" type="date">
@@ -235,7 +248,7 @@
   <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
 
   <h3>Setup</h3>
-  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.11</span></div>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.12</span></div>
 </div>
 
 <div id="moveSheet" class="sheet" hidden>
@@ -250,6 +263,7 @@
     <button class="btn" id="saveMove" disabled>Save move</button>
   </div>
   <div class="row"><input id="dur" type="range" min="3" max="120" step="1" value="10" aria-label="Move duration"><b id="durLbl">10 s</b></div>
+  <div class="row" id="smoothRow" hidden><span class="note">Smoothing</span><input id="smooth" type="range" min="0" max="100" step="5" value="70" aria-label="Path smoothing"><b id="smoothLbl">70%</b></div>
   <div class="note" id="moveInfo">Either tap Fly a path and fly the move yourself, or frame the opening and tap Set start, then frame the ending and tap Set end.</div>
   <div id="moves"></div>
 </div>
@@ -281,7 +295,7 @@
   <p class="by">Created by <b>Patrick Weir</b></p>
   <div class="rule"></div>
   <div class="co">Peacemaker Filmworks</div>
-  <div class="tap">TAP TO START · VERSION 2.11</div>
+  <div class="tap">TAP TO START · VERSION 2.12</div>
 </div>
 <div id="toast"></div>
 
@@ -388,12 +402,14 @@
   // ---------- flown paths: smooth a hand-flown recording into a clean camera path ----------
   var PATH_KEYS = ["lon", "lat", "h", "heading", "gimbal", "roll", "focal"];
   // samples: [{t (s), lon, lat (rad), h (m), heading (rad), gimbal (deg), roll (rad), focal}] in time order.
-  // Returns evenly spaced points with the jitter filtered out; sigma is the smoothing window in seconds.
-  function smoothPath(samples, sigma, outHz) {
+  // amount 0..100. Three passes: (1) blur out the shake, (2) keep only the key points where the motion really
+  // changes direction, (3) draw smooth curves through those key points. Returns evenly spaced points.
+  function smoothPath(samples, amount, outHz) {
     if (!samples || samples.length < 3) return samples || [];
-    var HZ = 20, T = samples[samples.length - 1].t, n = Math.max(2, Math.round(T * HZ) + 1), i, k;
+    amount = Math.max(0, Math.min(100, amount));
+    var HZ = 20, T = samples[samples.length - 1].t, n = Math.max(2, Math.round(T * HZ) + 1), i, j, k, NK = PATH_KEYS.length;
     // unwrap the angles so a turn through north doesn't look like a 360-degree jump
-    var src = samples.map(function (s) { var o = {}; for (var j in s) o[j] = s[j]; return o; });
+    var src = samples.map(function (s) { var o = {}; for (var q in s) o[q] = s[q]; return o; });
     ["heading", "roll"].forEach(function (key) {
       for (i = 1; i < src.length; i++) {
         var d = src[i][key] - src[i - 1][key];
@@ -401,29 +417,67 @@
         while (d < -Math.PI) { src[i][key] += 2 * Math.PI; d += 2 * Math.PI; }
       }
     });
-    // resample to an even 20 Hz
+    // resample to an even 20 Hz, as plain arrays [lon, lat, h, heading, gimbal, roll, focal]
     var even = [], si = 0;
     for (i = 0; i < n; i++) {
       var t = Math.min(T, i / HZ);
       while (si < src.length - 2 && src[si + 1].t < t) si++;
-      var a = src[si], b = src[si + 1], span = b.t - a.t, u = span > 0 ? Math.max(0, Math.min(1, (t - a.t) / span)) : 0, pt = { t: t };
-      for (k = 0; k < PATH_KEYS.length; k++) pt[PATH_KEYS[k]] = a[PATH_KEYS[k]] + (b[PATH_KEYS[k]] - a[PATH_KEYS[k]]) * u;
-      even.push(pt);
+      var sa = src[si], sb = src[si + 1], span = sb.t - sa.t, u = span > 0 ? Math.max(0, Math.min(1, (t - sa.t) / span)) : 0, row = [];
+      for (k = 0; k < NK; k++) row.push(sa[PATH_KEYS[k]] + (sb[PATH_KEYS[k]] - sa[PATH_KEYS[k]]) * u);
+      even.push(row);
     }
-    // Gaussian blur along time; the ends are held so the path still starts and finishes where you did
-    var r = Math.max(1, Math.round(sigma * HZ * 3)), w = [], out = [];
+    // pass 1: Gaussian blur along time. The ends are mirrored so the path still starts and finishes exactly where you did.
+    var sigma = 0.2 + amount / 100 * 2.0, r = Math.max(1, Math.round(sigma * HZ * 3)), w = [], blur = [];
     for (i = -r; i <= r; i++) w.push(Math.exp(-0.5 * Math.pow(i / (sigma * HZ), 2)));
-    var step = Math.max(1, Math.round(HZ / outHz));
-    for (i = 0; i < n; i += step) {
-      var o = { t: even[i].t }, sum = 0, acc = [0, 0, 0, 0, 0, 0, 0];
-      for (var j = -r; j <= r; j++) {
-        var e = even[Math.max(0, Math.min(n - 1, i + j))], wt = w[j + r]; sum += wt;
-        for (k = 0; k < PATH_KEYS.length; k++) acc[k] += e[PATH_KEYS[k]] * wt;
+    function sample(idx, key) {
+      if (idx < 0) return 2 * even[0][key] - even[Math.min(n - 1, -idx)][key];
+      if (idx > n - 1) return 2 * even[n - 1][key] - even[Math.max(0, 2 * (n - 1) - idx)][key];
+      return even[idx][key];
+    }
+    for (i = 0; i < n; i++) {
+      var acc = [0, 0, 0, 0, 0, 0, 0], sum = 0;
+      for (j = -r; j <= r; j++) { var wt = w[j + r]; sum += wt; for (k = 0; k < NK; k++) acc[k] += sample(i + j, k) * wt; }
+      for (k = 0; k < NK; k++) acc[k] /= sum;
+      blur.push(acc);
+    }
+    blur[0] = even[0].slice(); blur[n - 1] = even[n - 1].slice();
+    // pass 2: key points. A point is kept when leaving it out would bend the path by more than the tolerance.
+    var keep = [0, n - 1];
+    if (amount >= 10) {
+      var EARTH = 6378137, cosLat = Math.cos(blur[0][1]), tol = 0.25 + (amount - 10) / 90 * 2.25;
+      // one "unit" of error is about 2 m of position, 2 degrees of turn or tilt, or 2 mm of lens
+      var scale = [2 / (EARTH * cosLat), 2 / EARTH, 2, 2 * Math.PI / 180, 2, 2 * Math.PI / 180, 2];
+      var flags = new Array(n); flags[0] = flags[n - 1] = true;
+      var stack = [[0, n - 1]];
+      while (stack.length) {
+        var seg = stack.pop(), s0 = seg[0], s1 = seg[1], worst = 0, at = -1;
+        for (i = s0 + 1; i < s1; i++) {
+          var f = (i - s0) / (s1 - s0), e = 0;
+          for (k = 0; k < NK; k++) { var dv = Math.abs(blur[i][k] - (blur[s0][k] + (blur[s1][k] - blur[s0][k]) * f)) / scale[k]; if (dv > e) e = dv; }
+          if (e > worst) { worst = e; at = i; }
+        }
+        if (at > 0 && worst > tol) { flags[at] = true; stack.push([s0, at], [at, s1]); }
       }
-      for (k = 0; k < PATH_KEYS.length; k++) o[PATH_KEYS[k]] = acc[k] / sum;
+      keep = []; for (i = 0; i < n; i++) if (flags[i]) keep.push(i);
+    } else { keep = []; for (i = 0; i < n; i++) keep.push(i); }
+    // pass 3: smooth curves through the key points (cubic Hermite with Catmull-Rom slopes on the real timing)
+    var m = keep.length, slope = [];
+    for (i = 0; i < m; i++) {
+      var p0 = keep[Math.max(0, i - 1)], p1 = keep[Math.min(m - 1, i + 1)], sl = [];
+      for (k = 0; k < NK; k++) sl.push((blur[p1][k] - blur[p0][k]) / Math.max(1, p1 - p0));
+      slope.push(sl);
+    }
+    var out = [], step = Math.max(1, Math.round(HZ / outHz)), ki = 0;
+    function emit(idx) {
+      while (ki < m - 2 && keep[ki + 1] <= idx) ki++;
+      var a0 = keep[ki], a1 = keep[Math.min(m - 1, ki + 1)], len = Math.max(1, a1 - a0), x = Math.max(0, Math.min(1, (idx - a0) / len));
+      var x2 = x * x, x3 = x2 * x, h00 = 2 * x3 - 3 * x2 + 1, h10 = x3 - 2 * x2 + x, h01 = -2 * x3 + 3 * x2, h11 = x3 - x2, o = { t: Math.min(T, idx / HZ) };
+      for (k = 0; k < NK; k++) o[PATH_KEYS[k]] = h00 * blur[a0][k] + h10 * len * slope[ki][k] + h01 * blur[a1][k] + h11 * len * slope[Math.min(m - 1, ki + 1)][k];
       out.push(o);
     }
-    if (out[out.length - 1].t < T - 1e-6) { var last = {}; for (var q in out[out.length - 1]) last[q] = out[out.length - 1][q]; last.t = T; out.push(last); }
+    for (i = 0; i < n; i += step) emit(i);
+    if (out[out.length - 1].t < T - 1e-6) { ki = 0; emit(n - 1); out[out.length - 1].t = T; }
+    out.keyPoints = m;
     return out;
   }
   // Point on a path at time x seconds (linear between the smoothed points).
@@ -473,7 +527,7 @@
   var deviceTz = -new Date().getTimezoneOffset();
   var S = { mode: "scout", lon: 0, lat: 0, h: 0, heading: 0, gimbal: -15, gimbalT: -15, bank: 0, nose: 0, flown: false,
             vf: 0, vr: 0, vu: 0, vy: 0, home: null, focal: 24, prevFocal: 24, aspectIx: 0, speed: "sport", tz: deviceTz, hfov: 1,
-            sunPath: false, sunCenter: null, moveA: null, moveB: null, movePath: null, playT: 0, playDur: 10 };
+            sunPath: false, sunCenter: null, moveA: null, moveB: null, movePath: null, moveRaw: null, playT: 0, playDur: 10, playPaused: false };
   var SPEEDS = { cine:   { h: 3,  v: 1.5, y: 20,  label: "Cine" },
                  normal: { h: 10, v: 4,   y: 60,  label: "Normal" },
                  sport:  { h: 19, v: 8,   y: 90,  label: "Sport" },
@@ -513,7 +567,7 @@
     tileset = ts; scene.primitives.add(ts);
   }).catch(function (err) {
     console.error(err);
-    toast("The 3D map didn't load. Check the access token under Plan > Setup.", 9000);
+    toast("The 3D map didn't load. Check the access token under Settings > Setup.", 9000);
   });
 
   // ---------- lens + frame guide ----------
@@ -614,7 +668,7 @@
   function autoTz(lonDeg) {
     var est = Math.round(lonDeg / 15) * 60;
     var next = Math.abs(est - deviceTz) <= 60 ? deviceTz : est;
-    if (next !== S.tz) { S.tz = next; toast("Clock set to " + tzText(S.tz) + " for this location. Adjust it under Plan if it's off.", 4200); }
+    if (next !== S.tz) { S.tz = next; toast("Clock set to " + tzText(S.tz) + " for this location. Adjust it under Settings if it's off.", 4200); }
   }
   $("date").oninput = function () { applyTime(); buildSunButtons(); };
   $("time").oninput = applyTime; $("nowBtn").onclick = setNow;
@@ -774,7 +828,7 @@
   $("gimbal").oninput = function () { S.gimbalT = +this.value; $("gimbalLbl").textContent = gimbalText(S.gimbalT); };
 
   // ---------- clean viewfinder ----------
-  function setClean(on) { document.body.classList.toggle("clean", on); $("cleanExit").hidden = !on; }
+  function setClean(on) { document.body.classList.toggle("clean", on); $("cleanExit").hidden = !on || S.mode === "play"; }
   $("cleanBtn").onclick = function () { setClean(true); };
   $("cleanExit").onclick = function () { setClean(false); };
 
@@ -871,12 +925,28 @@
     $("playBtn").disabled = !(S.moveA && S.moveB); $("saveMove").disabled = !(S.moveA && S.moveB); $("recBtn").disabled = !(S.moveA && S.moveB);
     if (S.moveA && S.moveB) {
       var d = moveDistance();
-      $("moveInfo").textContent = (S.movePath ? "Flown path, smoothed · " : "") + d.toFixed(0) + " m in " + S.playDur + " s · average " + (d / S.playDur).toFixed(1) + " m/s (" + (d / S.playDur * 3.6).toFixed(0) + " km/h) · " +
+      $("smoothRow").hidden = !S.moveRaw;
+      $("moveInfo").textContent = (S.movePath ? "Flown path" + (S.movePath.keyPoints ? ", rebuilt from " + S.movePath.keyPoints + " key points" : "") + " · " : "") + d.toFixed(0) + " m in " + S.playDur + " s · average " + (d / S.playDur).toFixed(1) + " m/s (" + (d / S.playDur * 3.6).toFixed(0) + " km/h) · " +
         S.moveA.focal + "mm to " + S.moveB.focal + "mm";
     } else if (S.moveA) { $("moveInfo").textContent = "Start set. Now frame the ending and tap Set end."; }
   }
-  $("setA").onclick = function () { if (S.movePath) { S.movePath = null; S.moveB = null; } S.moveA = captureState(); updateMoveInfo(); toast("Start of move set"); };
-  $("setB").onclick = function () { if (S.movePath) { S.movePath = null; S.moveA = null; } S.moveB = captureState(); updateMoveInfo(); toast("End of move set"); };
+  $("setA").onclick = function () { S.moveRaw = null; if (S.movePath) { S.movePath = null; S.moveB = null; } S.moveA = captureState(); updateMoveInfo(); toast("Start of move set"); };
+  $("setB").onclick = function () { S.moveRaw = null; if (S.movePath) { S.movePath = null; S.moveA = null; } S.moveB = captureState(); updateMoveInfo(); toast("End of move set"); };
+
+  var smoothAmt = clamp(store.get("smooth") === null ? 70 : +store.get("smooth"), 0, 100);
+  // Rebuild the smoothed path from the flight as it was actually flown, at the current slider amount.
+  function applySmoothing() {
+    if (!S.moveRaw) return;
+    var path = smoothPath(S.moveRaw, smoothAmt, 10), a = path[0], b = path[path.length - 1];
+    S.movePath = path;
+    S.moveA = { lon: a.lon, lat: a.lat, h: a.h, heading: a.heading, gimbal: a.gimbal, focal: Math.round(a.focal) };
+    S.moveB = { lon: b.lon, lat: b.lat, h: b.h, heading: b.heading, gimbal: b.gimbal, focal: Math.round(b.focal) };
+  }
+  $("smooth").value = smoothAmt; $("smoothLbl").textContent = smoothAmt + "%";
+  $("smooth").oninput = function () {
+    smoothAmt = +this.value; $("smoothLbl").textContent = smoothAmt + "%"; store.set("smooth", String(smoothAmt));
+    applySmoothing(); updateMoveInfo();
+  };
 
   // Fly a path: watch the camera while you fly, then smooth it into a move
   var cap = null, PATH_MAX = 120;
@@ -884,10 +954,8 @@
     if (!cap) return;
     clearInterval(cap.timer); var raw = cap.samples; cap = null; $("pathStop").hidden = true;
     if (raw.length < 10 || raw[raw.length - 1].t < 1.5) { toast("That was too short to make a path. Fly for at least a couple of seconds."); return; }
-    var path = smoothPath(raw, 0.45, 10), a = path[0], b = path[path.length - 1];
-    S.movePath = path;
-    S.moveA = { lon: a.lon, lat: a.lat, h: a.h, heading: a.heading, gimbal: a.gimbal, focal: Math.round(a.focal) };
-    S.moveB = { lon: b.lon, lat: b.lat, h: b.h, heading: b.heading, gimbal: b.gimbal, focal: Math.round(b.focal) };
+    S.moveRaw = raw; applySmoothing();
+    var b = S.movePath[S.movePath.length - 1];
     S.playDur = clamp(Math.round(b.t), 3, 120); $("dur").value = S.playDur;
     renderMoves(); updateMoveInfo(); $("moveSheet").hidden = false;
     toast("Path captured and smoothed: " + b.t.toFixed(0) + " s. Play it, record a video, or save it.", 4200);
@@ -919,11 +987,11 @@
       info.appendChild(name); info.appendChild(meta);
       var play = document.createElement("button"); play.className = "btn"; play.textContent = "Play";
       play.onclick = function () {
-        S.moveA = m.A; S.moveB = m.B; S.movePath = m.path || null; S.playDur = m.dur; $("dur").value = m.dur; updateMoveInfo(); $("playBtn").click();
+        S.moveA = m.A; S.moveB = m.B; S.movePath = m.path || null; S.moveRaw = null; S.playDur = m.dur; $("dur").value = m.dur; updateMoveInfo(); $("playBtn").click();
       };
       var vid = document.createElement("button"); vid.className = "btn"; vid.textContent = "Record";
       vid.onclick = function () {
-        S.moveA = m.A; S.moveB = m.B; S.movePath = m.path || null; S.playDur = m.dur; $("dur").value = m.dur; updateMoveInfo(); S.recName = m.name; startMove(true);
+        S.moveA = m.A; S.moveB = m.B; S.movePath = m.path || null; S.moveRaw = null; S.playDur = m.dur; $("dur").value = m.dur; updateMoveInfo(); S.recName = m.name; startMove(true);
       };
       var del = document.createElement("button"); del.className = "btn"; del.textContent = "Delete";
       del.onclick = function () { var all = loadMoves(); all.splice(i, 1); store.set("moves", JSON.stringify(all)); renderMoves(); };
@@ -946,6 +1014,7 @@
     S.wantRec = !!record; S.preT = 0; S.playT = 0;
     if (record) { try { if (window.innerWidth >= 900) viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2); } catch (e) {} toast("Loading the opening frame, then recording\u2026", 2500); }
     $("sheet").hidden = true; $("moveSheet").hidden = true; setMode("play"); setClean(true);
+    S.playPaused = false; playButtons(false); $("playBar").hidden = false;
   }
   $("playBtn").onclick = function () { startMove(false); };
   $("recBtn").onclick = function () { S.recName = "move"; startMove(true); };
@@ -957,15 +1026,43 @@
       if (!(ready || S.preT > 6)) { poseAt(0); return; }
       S.preT = -1; if (S.wantRec) { try { startRecording(); } catch (e) { S.wantRec = false; toast("Couldn't start recording on this browser"); } }
     }
+    if (S.playPaused) { poseAt(S.playT); return; }
     S.playT = Math.min(1, S.playT + dt / S.playDur);
     poseAt(S.playT);
     if (S.playT >= 1) {
-      var b = S.moveB;
-      S.focal = b.focal; setGimbal(clamp(Math.round(b.gimbal), +$("gimbal").min, +$("gimbal").max)); buildLenses(); applyLens();
-      setClean(false); setMode("fly");
-      if (S.wantRec) { S.wantRec = false; setTimeout(stopRecording, 200); } else toast("Move finished. Open Moves to replay, record or save it.");
+      var wasRec = S.wantRec; S.wantRec = false;
+      exitPlay();
+      if (wasRec) setTimeout(stopRecording, 200); else toast("Move finished. Open Moves to replay, record or save it.");
     }
   }
+  // Leave playback and hand control back, with the drone wherever the camera currently is.
+  function exitPlay() {
+    S.playPaused = false; $("playBar").hidden = true;
+    S.focal = Math.round(S.focal);
+    setMode("fly");                      // (also levels the FPV airframe at this heading if FPV is selected)
+    setGimbal(clamp(Math.round(S.gimbal), +$("gimbal").min, +$("gimbal").max));
+    buildLenses(); applyLens(); setClean(false);
+  }
+  function playButtons(paused) {
+    $("playCancel").hidden = paused; $("playToStart").hidden = !paused; $("playStay").hidden = !paused; $("playResume").hidden = !paused;
+  }
+  $("playCancel").onclick = function () {
+    S.playPaused = true; playButtons(true);
+    if (rec) { try { rec.mr.pause(); } catch (e) {} }
+  };
+  $("playResume").onclick = function () {
+    S.playPaused = false; playButtons(false);
+    if (rec) { try { rec.mr.resume(); } catch (e) {} }
+  };
+  function cancelMove(toStart) {
+    var wasRec = S.wantRec || !!rec; S.wantRec = false;
+    if (rec) stopRecording(true);
+    if (toStart) poseAt(0);
+    exitPlay();
+    toast((toStart ? "Back at the start of the move." : "Move cancelled. You have control from here.") + (wasRec ? " The video was discarded." : ""));
+  }
+  $("playToStart").onclick = function () { cancelMove(true); };
+  $("playStay").onclick = function () { cancelMove(false); };
   function poseAt(t) {
     if (S.movePath) {
       var P = S.movePath, q = pathAt(P, t * P[P.length - 1].t);
@@ -1178,10 +1275,11 @@
     rec = { mr: mr, off: off, chunks: chunks, type: type, name: S.recName || "move" };
     mr.start(250);
   }
-  function stopRecording() {
+  function stopRecording(discard) {
     if (!rec) return;
     var r = rec; rec = null; r.off();
     r.mr.onstop = function () {
+      if (discard === true) return;
       var type = (r.mr.mimeType || r.type || "video/webm").split(";")[0];
       var blob = new Blob(r.chunks, { type: type });
       if (!blob.size) { toast("The recording came out empty on this browser"); return; }
