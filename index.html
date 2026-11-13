@@ -225,6 +225,10 @@
   <div class="row"><input id="dur" type="range" min="3" max="60" step="1" value="10" aria-label="Move duration"><b id="durLbl">10 s</b></div>
   <div class="note" id="moveInfo">Frame the opening, tap Set start. Frame the ending, tap Set end.</div>
 
+  <h3>FPV stick sensitivity</h3>
+  <div class="row"><input id="fpvRate" type="range" min="40" max="160" step="5" value="100" aria-label="FPV stick sensitivity"><b id="fpvRateLbl">100%</b></div>
+  <div class="note">Lower is calmer. 100% turns at up to 200° a second on pitch and roll.</div>
+
   <h3>Custom lens (full-frame equivalent mm)</h3>
   <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
 
@@ -331,8 +335,19 @@
     return ev;
   }
   // ---------- FPV (acro) physics: body axes are x = right, y = forward, z = up; world is east, north, up ----------
-  var FPV = { G: 9.81, THRUST: 9.81 * 3.2, DRAG2: 0.008, DRAG1: 0.08, PITCH: 280, ROLL: 280, YAW: 190 };
+  var FPV = { G: 9.81, THRUST: 9.81 * 2.4, DRAG2: 0.009, DRAG1: 0.10, PITCH: 200, ROLL: 200, YAW: 150, CENTER: 0.3, DEAD: 0.07 };
   FPV.HOVER = FPV.G / FPV.THRUST;
+  // Stick shaping: a small dead zone, gentle around centre, full rate only at the edge.
+  function fpvShape(x) {
+    var a = Math.abs(x); if (a < FPV.DEAD) return 0;
+    a = (a - FPV.DEAD) / (1 - FPV.DEAD);
+    return (x < 0 ? -1 : 1) * a * (FPV.CENTER + (1 - FPV.CENTER) * a * a);
+  }
+  // Throttle: stick centre is hover, with fine control around it; top is full power, bottom is motors idle.
+  function fpvThrottle(y) {
+    var e = 0.45 * y + 0.55 * y * y * y;
+    return y >= 0 ? FPV.HOVER + (1 - FPV.HOVER) * e : FPV.HOVER * (1 + e);
+  }
   function qMul(a, b) {
     return [a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3], a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
             a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1], a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]];
@@ -365,7 +380,7 @@
   }
   if (typeof module !== "undefined" && typeof window === "undefined") {
     module.exports = { sunPosition: sunPosition, sunEvents: sunEvents, instant: instant, tzText: tzText, hhmm: hhmm,
-                       FPV: FPV, fpvStep: fpvStep, qLevel: qLevel, qHeading: qHeading, qRot: qRot, worldPx: worldPx }; return;
+                       FPV: FPV, fpvStep: fpvStep, fpvShape: fpvShape, fpvThrottle: fpvThrottle, qLevel: qLevel, qHeading: qHeading, qRot: qRot, worldPx: worldPx }; return;
   }
 
   // ---------- splash ----------
@@ -405,7 +420,9 @@
   var LIMIT_H = 122, LIMIT_D = 500;     // metres: common legal ceiling, and a rough line-of-sight guide
   var input = { lx: 0, ly: 0, rx: 0, ry: 0 };
   var keys = {};
-  var F = { q: [1, 0, 0, 0], v: [0, 0, 0], ground: null, sampleT: 0, landed: false };   // FPV airframe state
+  var F = { q: [1, 0, 0, 0], v: [0, 0, 0], ground: null, sampleT: 0, landed: false, sp: 0, sr: 0, sy: 0 };   // FPV airframe state
+  var fpvRate = clamp0(+store.get("fpvRate") || 100, 40, 160);
+  function clamp0(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   // ---------- viewer ----------
   Cesium.Ion.defaultAccessToken = token;
@@ -609,7 +626,7 @@
   function fpvReset(keepSpeed) {
     F.q = qLevel(S.heading); F.landed = false; F.ground = null; F.sampleT = 0;
     F.v = keepSpeed ? [S.vf * Math.sin(S.heading) + S.vr * Math.cos(S.heading), S.vf * Math.cos(S.heading) - S.vr * Math.sin(S.heading), S.vu] : [0, 0, 0];
-    stickL.setY(FPV.HOVER * 2 - 1);
+    stickL.setY(0); F.sp = F.sr = F.sy = 0;
   }
   function setMode(m) {
     S.mode = m;
@@ -656,7 +673,7 @@
       g.min = 0; g.max = 60; setGimbal(25);
       $("stickLLbl").textContent = "THROTTLE · YAW"; $("stickRLbl").textContent = "PITCH · ROLL";
       stickL.hold(true); fpvReset(true);
-      toast("FPV acro: no self-levelling, and it falls unless you hold throttle. The left stick stays where you leave it.", 4200);
+      toast("FPV acro: no self-levelling. Left stick centre is hover and it stays where you leave it; pull it down and the drone falls.", 4600);
     } else if (was === "fpv") {
       S.focal = S.prevFocal; S.heading = qHeading(F.q); S.vf = S.vr = S.vu = S.vy = 0;
       g.min = -90; g.max = 30; setGimbal(-15);
@@ -665,6 +682,8 @@
     }
     buildLenses(); applyLens();
   };
+  $("fpvRate").value = fpvRate; $("fpvRateLbl").textContent = fpvRate + "%";
+  $("fpvRate").oninput = function () { fpvRate = +this.value; $("fpvRateLbl").textContent = fpvRate + "%"; store.set("fpvRate", String(fpvRate)); };
   $("gimbal").oninput = function () { S.gimbalT = +this.value; $("gimbalLbl").textContent = gimbalText(S.gimbalT); };
 
   // ---------- clean viewfinder ----------
@@ -773,7 +792,10 @@
   // ---------- FPV flight ----------
   var scratchM = new Cesium.Matrix4(), scratchD = new Cesium.Cartesian3(), scratchU = new Cesium.Cartesian3();
   function stepFpv(dt, now) {
-    var inp = { pitch: curve(input.ry), roll: curve(input.rx), yaw: curve(input.lx), throttle: clamp((input.ly + 1) / 2, 0, 1) };
+    // smooth the thumb input a little so touch jitter doesn't reach the airframe
+    var sm = Math.min(1, dt * 14), rate = fpvRate / 100;
+    F.sp += (fpvShape(input.ry) - F.sp) * sm; F.sr += (fpvShape(input.rx) - F.sr) * sm; F.sy += (fpvShape(input.lx) - F.sy) * sm;
+    var inp = { pitch: F.sp * rate, roll: F.sr * rate, yaw: F.sy * rate, throttle: clamp(fpvThrottle(input.ly), 0, 1) };
     var d = fpvStep(F, inp, dt);
     S.lat += d[1] / R; S.lon += d[0] / (R * Math.cos(S.lat)); S.h += d[2];
     // ground: sample the surface under the drone a few times a second and stop it falling through
@@ -852,7 +874,7 @@
       var o = homeOffset(S.lon, S.lat, S.h, S.home), hd = S.heading / D2R;
       $("hud").innerHTML = "H <b" + (o.up > LIMIT_H ? ' class="warn"' : "") + ">" + o.up.toFixed(0) + " m</b> · D <b" + (o.dist > LIMIT_D ? ' class="warn"' : "") + ">" + o.dist.toFixed(0) +
         " m</b> · <b>" + (isFpv() ? (Math.hypot(F.v[0], F.v[1], F.v[2]) * 3.6).toFixed(0) + " km/h" : Math.hypot(S.vf, S.vr).toFixed(1) + " m/s") + "</b> · hdg <b>" + compass(hd) + " " + Math.round(hd) + "°</b><br>" +
-        (isFpv() && S.mode === "fly" ? "thr <b>" + Math.round(clamp((input.ly + 1) / 2, 0, 1) * 100) + "%</b> · " : "") + lens + " · " + sun +
+        (isFpv() && S.mode === "fly" ? "thr <b>" + Math.round(clamp(fpvThrottle(input.ly), 0, 1) * 100) + "%</b> · " : "") + lens + " · " + sun +
         (o.up > LIMIT_H ? '<br><b class="warn">Above ' + LIMIT_H + " m</b>" : "");
     } else {
       $("hud").innerHTML = "Scouting · " + lens + " · " + sun;
