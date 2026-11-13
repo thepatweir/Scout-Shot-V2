@@ -95,16 +95,16 @@
   body.clean #hud { background:none; border-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; text-shadow:0 1px 3px #000; }
 
   /* sheet */
-  #sheet { position:fixed; left:0; right:0; bottom:0; max-height:64%; overflow-y:auto; touch-action:pan-y; background:rgba(14,15,17,.92);
+  .sheet { position:fixed; left:0; right:0; bottom:0; max-height:64%; overflow-y:auto; touch-action:pan-y; background:rgba(14,15,17,.92);
     border-top:1px solid var(--line); border-radius:18px 18px 0 0; padding:14px 14px calc(env(safe-area-inset-bottom, 0px) + 18px);
     -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
-  #sheet h3 { margin:16px 0 7px; font:800 11px var(--display); letter-spacing:.12em; color:var(--dim); text-transform:uppercase; }
-  #sheet h3:first-of-type { margin-top:0; }
+  .sheet h3 { margin:16px 0 7px; font:800 11px var(--display); letter-spacing:.12em; color:var(--dim); text-transform:uppercase; }
+  .sheet h3:first-of-type { margin-top:0; }
   .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
   .note { color:var(--dim); font-size:12px; }
-  #sheet input[type=range] { flex:1; min-width:140px; height:36px; accent-color:var(--accent); touch-action:pan-x; }
-  #sheet input[type=date], #sheet input[type=number] { background:#000; border:1px solid var(--line); border-radius:10px; padding:8px; -webkit-user-select:text; user-select:text; }
-  #sheet input[type=number] { width:84px; }
+  .sheet input[type=range] { flex:1; min-width:140px; height:36px; accent-color:var(--accent); touch-action:pan-x; }
+  .sheet input[type=date], .sheet input[type=number] { background:#000; border:1px solid var(--line); border-radius:10px; padding:8px; -webkit-user-select:text; user-select:text; }
+  .sheet input[type=number] { width:84px; }
   #sunBtns { display:flex; gap:6px; overflow-x:auto; touch-action:pan-x; scrollbar-width:none; margin-bottom:6px; }
   #sunBtns::-webkit-scrollbar { display:none; }
   #sunBtns .btn { padding:7px 10px; text-align:center; }
@@ -195,13 +195,14 @@
     <button class="btn" id="scoutBtn" hidden>Scout</button>
     <button class="btn" id="homeBtn" hidden>Home</button>
     <button class="btn" id="speedBtn" hidden>Sport</button>
+    <button class="btn" id="movesBtn">Moves</button>
     <button class="btn" id="mapBtn">Map</button>
     <button class="btn" id="cleanBtn">Clean view</button>
     <button class="btn" id="menuBtn">Plan</button>
   </div>
 </div>
 
-<div id="sheet" hidden>
+<div id="sheet" class="sheet" hidden>
   <button class="btn" id="closeSheet">Close</button>
   <h3>Time of day</h3>
   <div class="row">
@@ -223,6 +224,19 @@
     <button class="btn" id="aspectBtn">Frame 16:9</button>
   </div>
 
+  <h3>FPV stick sensitivity</h3>
+  <div class="row"><input id="fpvRate" type="range" min="40" max="160" step="5" value="100" aria-label="FPV stick sensitivity"><b id="fpvRateLbl">100%</b></div>
+  <div class="note">Lower is calmer. 100% turns at up to 200° a second on pitch and roll.</div>
+
+  <h3>Custom lens (full-frame equivalent mm)</h3>
+  <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
+
+  <h3>Setup</h3>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.10</span></div>
+</div>
+
+<div id="moveSheet" class="sheet" hidden>
+  <button class="btn" id="closeMoves" style="float:right">Close</button>
   <h3>Camera move</h3>
   <div class="row">
     <button class="btn" id="setA">Set start</button>
@@ -234,16 +248,6 @@
   <div class="row"><input id="dur" type="range" min="3" max="60" step="1" value="10" aria-label="Move duration"><b id="durLbl">10 s</b></div>
   <div class="note" id="moveInfo">Frame the opening, tap Set start. Frame the ending, tap Set end.</div>
   <div id="moves"></div>
-
-  <h3>FPV stick sensitivity</h3>
-  <div class="row"><input id="fpvRate" type="range" min="40" max="160" step="5" value="100" aria-label="FPV stick sensitivity"><b id="fpvRateLbl">100%</b></div>
-  <div class="note">Lower is calmer. 100% turns at up to 200° a second on pitch and roll.</div>
-
-  <h3>Custom lens (full-frame equivalent mm)</h3>
-  <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
-
-  <h3>Setup</h3>
-  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.9</span></div>
 </div>
 
 <div id="vid" hidden>
@@ -273,7 +277,7 @@
   <p class="by">Created by <b>Patrick Weir</b></p>
   <div class="rule"></div>
   <div class="co">Peacemaker Filmworks</div>
-  <div class="tap">TAP TO START · VERSION 2.9</div>
+  <div class="tap">TAP TO START · VERSION 2.10</div>
 </div>
 <div id="toast"></div>
 
@@ -751,29 +755,32 @@
   window.addEventListener("blur", function () { keys = {}; });
   // Mouse wheel tilts the camera while flying: roll down to tilt up, up to tilt down.
   window.addEventListener("wheel", function (e) {
-    if (S.mode !== "fly" || (e.target.closest && e.target.closest("#sheet, #card, #mini"))) return;
+    if (S.mode !== "fly" || (e.target.closest && e.target.closest(".sheet, #vid, #mini"))) return;
     e.preventDefault();
     var gs = $("gimbal"), px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;      // some mice report lines, not pixels
     S.gimbalT = clamp(S.gimbalT + clamp(px, -300, 300) * 0.04, +gs.min, +gs.max);
     gs.value = S.gimbalT; $("gimbalLbl").textContent = gimbalText(S.gimbalT);
   }, { passive: false });
-  // Mouse look (PC): click the view to capture the mouse, then moving it turns the drone and tilts the camera. Esc frees the mouse.
+  // Mouse look (PC): hold the right mouse button anywhere on the view; moving the mouse turns the drone and tilts the camera. Let go to stop.
   var mouseLook = (function () {
-    var held = false, told = false, map = $("map"), YAW = 0.12, TILT = 0.10;      // degrees per pixel of mouse travel
+    var held = false, map = $("map"), YAW = 0.12, TILT = 0.10;      // degrees per pixel of mouse travel
     function canLook() { return S.mode === "fly" && !isFpv(); }
-    function locked() { return document.pointerLockElement === scene.canvas; }
-    function release() { held = false; if (locked() && document.exitPointerLock) document.exitPointerLock(); }
+    function release() {
+      held = false;
+      if (document.pointerLockElement === scene.canvas && document.exitPointerLock) document.exitPointerLock();
+    }
+    window.addEventListener("contextmenu", function (e) { if (S.mode === "fly" || held) e.preventDefault(); });
     map.addEventListener("pointerdown", function (e) {
-      if (!canLook() || e.pointerType !== "mouse" || e.button !== 0) return;
-      held = true;
+      if (!canLook() || e.pointerType !== "mouse" || e.button !== 2) return;
+      held = true; e.preventDefault();
+      // hide and hold the pointer while the button is down so it can't run off the edge of the screen
       try { var r = scene.canvas.requestPointerLock && scene.canvas.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (x) {}
     });
-    window.addEventListener("pointerup", function (e) { if (e.pointerType === "mouse") held = false; });
-    document.addEventListener("pointerlockchange", function () {
-      if (locked() && !told) { told = true; toast("Mouse look on. Press Esc to get the pointer back.", 3600); }
-    });
+    function up(e) { if (e.button === 2 || e.buttons === 0) release(); }
+    window.addEventListener("pointerup", up); document.addEventListener("mouseup", up);
+    document.addEventListener("pointerlockchange", function () { if (document.pointerLockElement !== scene.canvas) held = false; });
     document.addEventListener("mousemove", function (e) {
-      if (!canLook() || !(locked() || held)) return;
+      if (!canLook() || !held) return;
       var gs = $("gimbal");
       S.heading = (S.heading + (e.movementX || 0) * YAW * D2R + TWO_PI) % TWO_PI;
       S.gimbalT = S.gimbal = clamp(S.gimbalT - (e.movementY || 0) * TILT, +gs.min, +gs.max);   // mouse forward looks up
@@ -847,7 +854,7 @@
     if (!S.home) setHome(S.moveA.lon / D2R, S.moveA.lat / D2R, S.moveA.h - 30);
     S.wantRec = !!record; S.preT = 0; S.playT = 0;
     if (record) { try { if (window.innerWidth >= 900) viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2); } catch (e) {} toast("Loading the opening frame, then recording\u2026", 2500); }
-    $("sheet").hidden = true; setMode("play"); setClean(true);
+    $("sheet").hidden = true; $("moveSheet").hidden = true; setMode("play"); setClean(true);
   }
   $("playBtn").onclick = function () { startMove(false); };
   $("recBtn").onclick = function () { S.recName = "move"; startMove(true); };
@@ -865,7 +872,7 @@
       var b = S.moveB;
       S.focal = b.focal; setGimbal(clamp(Math.round(b.gimbal), +$("gimbal").min, +$("gimbal").max)); buildLenses(); applyLens();
       setClean(false); setMode("fly");
-      if (S.wantRec) { S.wantRec = false; setTimeout(stopRecording, 200); } else toast("Move finished. Open Plan to replay or adjust it.");
+      if (S.wantRec) { S.wantRec = false; setTimeout(stopRecording, 200); } else toast("Move finished. Open Moves to replay, record or save it.");
     }
   }
   function poseAt(t) {
@@ -1097,7 +1104,9 @@
   }
   $("vidClose").onclick = function () { $("vid").hidden = true; try { $("vidPlayer").pause(); } catch (e) {} };
 
-  $("menuBtn").onclick = function () { renderMoves(); buildSunButtons(); updateMoveInfo(); $("sheet").hidden = false; };
+  $("menuBtn").onclick = function () { buildSunButtons(); $("moveSheet").hidden = true; $("sheet").hidden = false; };
+  $("movesBtn").onclick = function () { renderMoves(); updateMoveInfo(); $("sheet").hidden = true; $("moveSheet").hidden = false; };
+  $("closeMoves").onclick = function () { $("moveSheet").hidden = true; };
   $("closeSheet").onclick = function () { $("sheet").hidden = true; };
   $("resetTok").onclick = function () { store.del("ionToken"); $("sheet").hidden = true; showGate(); };
 
