@@ -240,6 +240,15 @@
     <button class="btn" id="aspectBtn">Frame 16:9</button>
   </div>
 
+  <h3>Picture quality</h3>
+  <div class="row"><button class="btn" id="qFast">Fast</button><button class="btn" id="qStd">Standard</button><button class="btn" id="qUltra">Ultra</button></div>
+  <div class="note">Ultra renders at your screen's full resolution with sharper map detail and smoother edges. It uses more battery and data.</div>
+
+  <h3>Controller</h3>
+  <div class="note" id="padStatus">No controller detected. Plug one in, then move a stick or press a button on it.</div>
+  <div class="row" style="margin-top:6px"><button class="btn" id="padSetup">Set up sticks</button><button class="btn" id="padReset">Forget setup</button></div>
+  <div class="note" id="padStep" hidden style="color:var(--accent);font-size:14px;margin-bottom:6px"></div>
+
   <h3>FPV stick sensitivity</h3>
   <div class="row"><input id="fpvRate" type="range" min="40" max="160" step="5" value="100" aria-label="FPV stick sensitivity"><b id="fpvRateLbl">100%</b></div>
   <div class="note">Lower is calmer. 100% turns at up to 200° a second on pitch and roll.</div>
@@ -248,7 +257,7 @@
   <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
 
   <h3>Setup</h3>
-  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.12</span></div>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.14</span></div>
 </div>
 
 <div id="moveSheet" class="sheet" hidden>
@@ -295,7 +304,7 @@
   <p class="by">Created by <b>Patrick Weir</b></p>
   <div class="rule"></div>
   <div class="co">Peacemaker Filmworks</div>
-  <div class="tap">TAP TO START · VERSION 2.12</div>
+  <div class="tap">TAP TO START · VERSION 2.14</div>
 </div>
 <div id="toast"></div>
 
@@ -562,9 +571,26 @@
   camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-123.105, 49.254, 1250),
                    orientation: { heading: 338 * D2R, pitch: -20 * D2R, roll: 0 } });
 
-  var tileset = null;
+  var tileset = null, quality = store.get("quality") || "std";
+  // Picture quality: how many pixels are drawn, how detailed the map tiles are, and how edges are smoothed.
+  function applyQuality() {
+    var dpr = window.devicePixelRatio || 1, ultra = quality === "ultra", fast = quality === "fast";
+    try {
+      viewer.useBrowserRecommendedResolution = !ultra;                 // Ultra draws every physical pixel (capped at 2x)
+      viewer.resolutionScale = ultra ? Math.min(1, 2 / dpr) : fast ? 0.75 : 1;
+      scene.msaaSamples = ultra ? 4 : 1;
+      scene.postProcessStages.fxaa.enabled = !fast;
+      if (tileset) tileset.maximumScreenSpaceError = ultra ? 8 : fast ? 28 : 16;   // lower = sharper, more detailed tiles
+    } catch (e) {}
+    ["qFast", "qStd", "qUltra"].forEach(function (id, i) { $(id).classList.toggle("on", ["fast", "std", "ultra"][i] === quality); });
+  }
+  function setQuality(q) { quality = q; store.set("quality", q); applyQuality(); }
+  $("qFast").onclick = function () { setQuality("fast"); };
+  $("qStd").onclick = function () { setQuality("std"); };
+  $("qUltra").onclick = function () { setQuality("ultra"); toast("Ultra quality on. If flying gets choppy, switch back to Standard."); };
+  applyQuality();
   Cesium.createGooglePhotorealistic3DTileset().then(function (ts) {
-    tileset = ts; scene.primitives.add(ts);
+    tileset = ts; scene.primitives.add(ts); applyQuality();
   }).catch(function (err) {
     console.error(err);
     toast("The 3D map didn't load. Check the access token under Settings > Setup.", 9000);
@@ -901,6 +927,80 @@
   function curve(v) { return v * Math.abs(v); }   // finer control near centre
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+  // ---------- game controllers and USB radios ----------
+  // A saved setup is { thr, yaw, pit, rol }, each [axis number, +1 or -1], so that +1 means up / right / forward.
+  var pad = { cfg: {}, wizard: null, seen: "" };
+  function padList() { try { return Array.prototype.filter.call(navigator.getGamepads ? navigator.getGamepads() : [], function (g) { return g && g.connected; }); } catch (e) { return []; } }
+  function padConfig(gp) {
+    if (pad.cfg[gp.id] === undefined) { try { pad.cfg[gp.id] = JSON.parse(store.get("pad:" + gp.id) || "null"); } catch (e) { pad.cfg[gp.id] = null; } }
+    if (pad.cfg[gp.id]) return pad.cfg[gp.id];
+    return gp.mapping === "standard" ? { thr: [1, -1], yaw: [0, 1], pit: [3, -1], rol: [2, 1] } : null;   // ordinary gamepads work without setup
+  }
+  // Current stick positions from the first usable controller, or null to use the on-screen sticks.
+  function readPad() {
+    if (pad.wizard) return null;
+    var list = padList();
+    for (var i = 0; i < list.length; i++) {
+      var gp = list[i], c = padConfig(gp);
+      if (!c) continue;
+      var v = function (m) { return clamp((gp.axes[m[0]] || 0) * m[1], -1, 1); };
+      return { lx: v(c.yaw), ly: v(c.thr), rx: v(c.rol), ry: v(c.pit) };
+    }
+    return null;
+  }
+  var IN = input;                     // whichever is live this frame: controller or on-screen sticks
+  function padStatus() {
+    var list = padList(), el = $("padStatus");
+    if (!list.length) { el.textContent = "No controller detected. Plug one in, then move a stick or press a button on it."; return; }
+    var gp = list[0], saved = !!pad.cfg[gp.id], ok = !!padConfig(gp);
+    el.textContent = "Connected: " + gp.id.slice(0, 60) + (saved ? " \u00b7 using your stick setup" : ok ? " \u00b7 standard layout, ready to fly" : " \u00b7 tap Set up sticks to tell the app which stick is which");
+  }
+  setInterval(padStatus, 1000);
+  window.addEventListener("gamepadconnected", function (e) {
+    var ok = !!padConfig(e.gamepad);
+    toast(ok ? "Controller connected and ready" : "Controller connected. Open Settings and tap Set up sticks.", 3600); padStatus();
+  });
+  var PAD_STEPS = [["thr", "Push THROTTLE all the way up and hold it"], ["yaw", "Push YAW all the way right and hold it"],
+                   ["pit", "Push PITCH all the way forward and hold it"], ["rol", "Push ROLL all the way right and hold it"]];
+  function padWizardEnd(msg) {
+    if (pad.wizard) clearInterval(pad.wizard.timer);
+    pad.wizard = null; $("padStep").hidden = true; if (msg) toast(msg, 3600); padStatus();
+  }
+  $("padSetup").onclick = function () {
+    var list = padList();
+    if (!list.length) { toast("No controller detected yet. Plug it in and move a stick first."); return; }
+    if (pad.wizard) { padWizardEnd("Setup cancelled"); return; }
+    var id = list[0].id, w = pad.wizard = { step: 0, cfg: {}, used: {}, base: null, wait: 12, hold: 0, idle: 0 };
+    $("padStep").hidden = false; $("padStep").textContent = "Let go of both sticks\u2026";
+    w.timer = setInterval(function () {
+      var gp = padList().filter(function (g) { return g.id === id; })[0];
+      if (!gp) { padWizardEnd("The controller disconnected"); return; }
+      if (w.wait > 0) {                         // short pause, then note where every axis is resting
+        if (--w.wait === 0) { w.base = Array.prototype.slice.call(gp.axes); $("padStep").textContent = "Step " + (w.step + 1) + " of 4: " + PAD_STEPS[w.step][1]; }
+        return;
+      }
+      var best = -1, bestD = 0;
+      for (var a = 0; a < gp.axes.length; a++) {
+        if (w.used[a]) continue;
+        var d = gp.axes[a] - w.base[a]; if (Math.abs(d) > Math.abs(bestD)) { bestD = d; best = a; }
+      }
+      if (best >= 0 && Math.abs(bestD) > 0.55) {
+        if (++w.hold >= 6) {                    // held for about a third of a second
+          w.cfg[PAD_STEPS[w.step][0]] = [best, bestD > 0 ? 1 : -1]; w.used[best] = true; w.hold = 0; w.idle = 0;
+          if (++w.step >= PAD_STEPS.length) {
+            pad.cfg[id] = w.cfg; store.set("pad:" + id, JSON.stringify(w.cfg));
+            padWizardEnd("Controller set up. You're ready to fly with it."); return;
+          }
+          w.wait = 16; $("padStep").textContent = "Got it. Let go\u2026";
+        }
+      } else { w.hold = 0; if (++w.idle > 500) padWizardEnd("Setup timed out. Tap Set up sticks to try again."); }
+    }, 50);
+  };
+  $("padReset").onclick = function () {
+    padList().forEach(function (g) { store.del("pad:" + g.id); pad.cfg[g.id] = null; });
+    padWizardEnd("Stick setup forgotten");
+  };
+
   // ---------- camera moves ----------
   function captureState() {
     if (S.mode === "fly" && !isFpv()) return { lon: S.lon, lat: S.lat, h: S.h, heading: S.heading, gimbal: S.gimbal, focal: S.focal };
@@ -1012,7 +1112,7 @@
     if (cap) { clearInterval(cap.timer); cap = null; $("pathStop").hidden = true; }
     if (!S.home) setHome(S.moveA.lon / D2R, S.moveA.lat / D2R, S.moveA.h - 30);
     S.wantRec = !!record; S.preT = 0; S.playT = 0;
-    if (record) { try { if (window.innerWidth >= 900) viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2); } catch (e) {} toast("Loading the opening frame, then recording\u2026", 2500); }
+    if (record) { try { if (window.innerWidth >= 900 && quality !== "ultra") viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2); } catch (e) {} toast("Loading the opening frame, then recording\u2026", 2500); }
     $("sheet").hidden = true; $("moveSheet").hidden = true; setMode("play"); setClean(true);
     S.playPaused = false; playButtons(false); $("playBar").hidden = false;
   }
@@ -1087,12 +1187,13 @@
     var now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.mode === "play") { stepPlay(dt); return; }
     if (S.mode !== "fly") return;
+    IN = readPad() || input;
     if (isFpv()) { stepFpv(dt, now); return; }
     var sp = SPEEDS[S.speed], fpv = false;
     // PC keys, game-style: W/S forward and back, A/D slide; Space or E climbs, Shift or Q descends; arrows climb and turn
-    var tu = clamp(curve(input.ly) + axis(" ", "shift") + axis("e", "q") + axis("arrowup", "arrowdown"), -1, 1);
-    var ty = curve(input.lx) + axis("arrowright", "arrowleft");
-    var tf = curve(input.ry) + axis("w", "s"), tr = curve(input.rx) + axis("d", "a");
+    var tu = clamp(curve(IN.ly) + axis(" ", "shift") + axis("e", "q") + axis("arrowup", "arrowdown"), -1, 1);
+    var ty = curve(IN.lx) + axis("arrowright", "arrowleft");
+    var tf = curve(IN.ry) + axis("w", "s"), tr = curve(IN.rx) + axis("d", "a");
     var k = Math.min(1, dt * (fpv ? 1.4 : 3.2));    // FPV carries more momentum
     var side = fpv ? 0.45 : 1;
     if (fpv) ty += tr * 0.55 * clamp(Math.abs(S.vf) / sp.h + 0.3, 0, 1);   // banking pulls the nose round
@@ -1116,8 +1217,8 @@
   function stepFpv(dt, now) {
     // smooth the thumb input a little so touch jitter doesn't reach the airframe
     var sm = Math.min(1, dt * 14), rate = fpvRate / 100;
-    F.sp += (fpvShape(input.ry) - F.sp) * sm; F.sr += (fpvShape(input.rx) - F.sr) * sm; F.sy += (fpvShape(input.lx) - F.sy) * sm;
-    var inp = { pitch: F.sp * rate, roll: F.sr * rate, yaw: F.sy * rate, throttle: clamp(fpvThrottle(input.ly), 0, 1) };
+    F.sp += (fpvShape(IN.ry) - F.sp) * sm; F.sr += (fpvShape(IN.rx) - F.sr) * sm; F.sy += (fpvShape(IN.lx) - F.sy) * sm;
+    var inp = { pitch: F.sp * rate, roll: F.sr * rate, yaw: F.sy * rate, throttle: clamp(fpvThrottle(IN.ly), 0, 1) };
     var d = fpvStep(F, inp, dt);
     S.lat += d[1] / R; S.lon += d[0] / (R * Math.cos(S.lat)); S.h += d[2];
     // ground: sample the surface under the drone a few times a second and stop it falling through
@@ -1196,7 +1297,7 @@
       var o = homeOffset(S.lon, S.lat, S.h, S.home), hd = S.heading / D2R;
       $("hud").innerHTML = "H <b" + (o.up > LIMIT_H ? ' class="warn"' : "") + ">" + o.up.toFixed(0) + " m</b> · D <b" + (o.dist > LIMIT_D ? ' class="warn"' : "") + ">" + o.dist.toFixed(0) +
         " m</b> · <b>" + (isFpv() ? (Math.hypot(F.v[0], F.v[1], F.v[2]) * 3.6).toFixed(0) + " km/h" : Math.hypot(S.vf, S.vr).toFixed(1) + " m/s") + "</b> · hdg <b>" + compass(hd) + " " + Math.round(hd) + "°</b><br>" +
-        (isFpv() && S.mode === "fly" ? "thr <b>" + Math.round(clamp(fpvThrottle(input.ly), 0, 1) * 100) + "%</b> · " : "") + lens + " · " + sun +
+        (isFpv() && S.mode === "fly" ? "thr <b>" + Math.round(clamp(fpvThrottle(IN.ly), 0, 1) * 100) + "%</b> · " : "") + lens + " · " + sun +
         (o.up > LIMIT_H ? '<br><b class="warn">Above ' + LIMIT_H + " m</b>" : "");
     } else {
       $("hud").innerHTML = "Scouting · " + lens + " · " + sun;
@@ -1286,7 +1387,7 @@
       showVideo(blob, r.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + (type.indexOf("mp4") >= 0 ? ".mp4" : ".webm"));
     };
     try { r.mr.stop(); } catch (e) { toast("Couldn't finish the recording"); }
-    try { viewer.resolutionScale = 1; } catch (e) {}
+    applyQuality();
   }
   function showVideo(blob, filename) {
     if (lastVideo) URL.revokeObjectURL(lastVideo.url);
