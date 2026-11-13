@@ -710,7 +710,23 @@
   }
   var stickL = makeStick($("stickL"), function (x, y) { input.lx = x; input.ly = y; });
   makeStick($("stickR"), function (x, y) { input.rx = x; input.ry = y; });
-  window.addEventListener("keydown", function (e) { if (e.target.tagName !== "INPUT") keys[e.key.toLowerCase()] = true; });
+  // Keys fly the drone unless you're typing in a text box. Sliders don't swallow them.
+  window.addEventListener("keydown", function (e) {
+    var t = e.target, typing = t.tagName === "INPUT" && t.type !== "range";
+    if (typing) return;
+    var k = e.key.toLowerCase(); keys[k] = true;
+    if (S.mode === "fly" && (k.indexOf("arrow") === 0 || k === " ")) e.preventDefault();
+    if (t.tagName === "INPUT") t.blur();
+  });
+  window.addEventListener("blur", function () { keys = {}; });
+  // Mouse wheel tilts the camera while flying: roll up to tilt up, down to tilt down.
+  window.addEventListener("wheel", function (e) {
+    if (S.mode !== "fly" || (e.target.closest && e.target.closest("#sheet, #card, #mini"))) return;
+    e.preventDefault();
+    var gs = $("gimbal"), px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;      // some mice report lines, not pixels
+    S.gimbalT = clamp(S.gimbalT - clamp(px, -300, 300) * 0.04, +gs.min, +gs.max);
+    gs.value = S.gimbalT; $("gimbalLbl").textContent = gimbalText(S.gimbalT);
+  }, { passive: false });
   window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
   function axis(pos, neg) { return (keys[pos] ? 1 : 0) - (keys[neg] ? 1 : 0); }
   function curve(v) { return v * Math.abs(v); }   // finer control near centre
