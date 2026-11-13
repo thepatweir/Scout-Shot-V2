@@ -125,6 +125,11 @@
   #cardFacts td:first-child { color:var(--dim); width:38%; }
   #cardBrand { margin-top:16px; text-align:center; color:var(--dim); font:800 10px var(--display); letter-spacing:.16em; text-transform:uppercase; }
 
+  #vid { position:fixed; inset:0; background:rgba(6,7,8,.95); overflow-y:auto; touch-action:pan-y; padding:calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+  #vid .inner { max-width:900px; margin:0 auto; }
+  #vidPlayer { width:100%; border-radius:10px; background:#000; display:block; }
+  a.btn { text-decoration:none; display:inline-block; }
+
   /* splash */
   #splash { position:fixed; inset:0; background:radial-gradient(120% 90% at 50% 30%, #1a1c20 0%, #0b0c0d 60%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     padding:24px; transition:opacity .6s; }
@@ -155,7 +160,6 @@
 <div id="dark" class="fx"></div>
 <div id="frame"></div>
 <div id="cross"></div>
-<div id="mstick" hidden><i></i></div>
 
 <div id="top">
   <div id="searchRow">
@@ -191,7 +195,6 @@
     <button class="btn" id="scoutBtn" hidden>Scout</button>
     <button class="btn" id="homeBtn" hidden>Home</button>
     <button class="btn" id="speedBtn" hidden>Sport</button>
-    <button class="btn" id="saveBtn">Save shot</button>
     <button class="btn" id="mapBtn">Map</button>
     <button class="btn" id="cleanBtn">Clean view</button>
     <button class="btn" id="menuBtn">Plan</button>
@@ -225,6 +228,7 @@
     <button class="btn" id="setA">Set start</button>
     <button class="btn" id="setB">Set end</button>
     <button class="btn go" id="playBtn" disabled>Play move</button>
+    <button class="btn" id="recBtn" disabled>Record video</button>
     <button class="btn" id="saveMove" disabled>Save move</button>
   </div>
   <div class="row"><input id="dur" type="range" min="3" max="60" step="1" value="10" aria-label="Move duration"><b id="durLbl">10 s</b></div>
@@ -238,25 +242,19 @@
   <h3>Custom lens (full-frame equivalent mm)</h3>
   <div class="row"><input id="customMm" type="number" min="8" max="1200" inputmode="numeric" placeholder="e.g. 28"><button class="btn" id="customBtn">Use</button></div>
 
-  <h3>Saved shots</h3>
-  <div id="shots"></div>
-
   <h3>Setup</h3>
-  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.6</span></div>
+  <div class="row"><button class="btn" id="resetTok">Change access token</button><span class="note">Shot Scout version 2.9</span></div>
 </div>
 
-<div id="card" hidden>
+<div id="vid" hidden>
   <div class="inner">
-    <img id="cardImg" alt="Shot preview">
-    <input id="cardName" type="text" maxlength="40" aria-label="Shot name">
-    <table id="cardFacts"></table>
+    <video id="vidPlayer" controls playsinline loop muted></video>
+    <div class="note" id="vidInfo" style="margin:10px 0"></div>
     <div class="row">
-      <button class="btn go" id="cardView">Fly to it</button>
-      <button class="btn" id="cardShare">Share</button>
-      <button class="btn" id="cardDelete">Delete</button>
-      <button class="btn" id="cardClose">Close</button>
+      <a class="btn go" id="vidSave" href="#" download>Save video</a>
+      <button class="btn" id="vidShare" hidden>Share</button>
+      <button class="btn" id="vidClose">Close</button>
     </div>
-    <div id="cardBrand">Shot Scout · Peacemaker Filmworks</div>
   </div>
 </div>
 
@@ -275,7 +273,7 @@
   <p class="by">Created by <b>Patrick Weir</b></p>
   <div class="rule"></div>
   <div class="co">Peacemaker Filmworks</div>
-  <div class="tap">TAP TO START · VERSION 2.6</div>
+  <div class="tap">TAP TO START · VERSION 2.9</div>
 </div>
 <div id="toast"></div>
 
@@ -452,8 +450,9 @@
   camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-123.105, 49.254, 1250),
                    orientation: { heading: 338 * D2R, pitch: -20 * D2R, roll: 0 } });
 
+  var tileset = null;
   Cesium.createGooglePhotorealistic3DTileset().then(function (ts) {
-    scene.primitives.add(ts);
+    tileset = ts; scene.primitives.add(ts);
   }).catch(function (err) {
     console.error(err);
     toast("The 3D map didn't load. Check the access token under Plan > Setup.", 9000);
@@ -647,10 +646,12 @@
     S.mode = m;
     var fly = m === "fly", play = m === "play", air = fly || play;
     scene.screenSpaceCameraController.enableInputs = !air;
+    if (m !== "fly" && typeof mouseLook !== "undefined" && mouseLook) mouseLook.release();
     $("sticks").hidden = !fly; $("gimbalWrap").hidden = !fly;
     $("searchRow").hidden = air; $("cross").hidden = air;
     $("takeoffBtn").hidden = air; $("resumeBtn").hidden = air || !S.flown;
     $("scoutBtn").hidden = !fly; $("homeBtn").hidden = !fly; $("speedBtn").hidden = !fly;
+    if (air && typeof droneEntity !== "undefined" && droneEntity) droneEntity.show = false;
     if (fly) { S.flown = true; S.vf = S.vr = S.vu = S.vy = 0; if (isFpv()) fpvReset(false); }
     if (!air) { S.bank = 0; S.nose = 0; }
   }
@@ -672,7 +673,20 @@
     setMode("fly"); toast("Airborne, 30 m above your takeoff point");
   };
   $("resumeBtn").onclick = function () { setMode("fly"); };
-  $("scoutBtn").onclick = function () { setMode("scout"); };
+  // Scout: pull back about 1,000 ft (305 m) behind and above the drone, looking down at 45 degrees at where it was.
+  var droneEntity = null;
+  $("scoutBtn").onclick = function () {
+    var pos = Cesium.Cartesian3.fromRadians(S.lon, S.lat, S.h), hd = S.heading;
+    setMode("scout");
+    if (!droneEntity) {
+      droneEntity = viewer.entities.add({ position: pos,
+        point: { pixelSize: 12, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+        label: { text: "Drone", font: "600 13px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -18), fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
+                 style: Cesium.LabelStyle.FILL_AND_OUTLINE, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    } else { droneEntity.position = pos; }
+    droneEntity.show = true;
+    camera.flyToBoundingSphere(new Cesium.BoundingSphere(pos, 0), { offset: new Cesium.HeadingPitchRange(hd, -45 * D2R, 305), duration: 1.4 });
+  };
   $("homeBtn").onclick = function () {
     if (!S.home) return;
     S.lon = S.home.lon * D2R; S.lat = S.home.lat * D2R; S.h = Math.max(S.h, S.home.h + 10);
@@ -687,7 +701,7 @@
       S.prevFocal = S.focal; S.focal = 14;
       g.min = 0; g.max = 60; setGimbal(25);
       $("stickLLbl").textContent = "THROTTLE · YAW"; $("stickRLbl").textContent = "PITCH · ROLL";
-      stickL.hold(true); fpvReset(true);
+      stickL.hold(true); fpvReset(true); mouseLook.release();
       toast("FPV acro: no self-levelling. Left stick centre is hover and it stays where you leave it; pull it down and the drone falls.", 4600);
     } else if (was === "fpv") {
       S.focal = S.prevFocal; S.heading = qHeading(F.q); S.vf = S.vr = S.vu = S.vy = 0;
@@ -731,8 +745,9 @@
     if (typing) return;
     var k = e.key.toLowerCase(); keys[k] = true;
     if (S.mode === "fly" && (k.indexOf("arrow") === 0 || k === " ")) e.preventDefault();
-    if (t.tagName === "INPUT") t.blur();
+    if (t.tagName === "INPUT" || t.tagName === "BUTTON") t.blur();
   });
+  document.addEventListener("click", function (e) { var b = e.target.closest && e.target.closest("button"); if (b) b.blur(); });
   window.addEventListener("blur", function () { keys = {}; });
   // Mouse wheel tilts the camera while flying: roll down to tilt up, up to tilt down.
   window.addEventListener("wheel", function (e) {
@@ -742,24 +757,29 @@
     S.gimbalT = clamp(S.gimbalT + clamp(px, -300, 300) * 0.04, +gs.min, +gs.max);
     gs.value = S.gimbalT; $("gimbalLbl").textContent = gimbalText(S.gimbalT);
   }, { passive: false });
-  // Right mouse button, held anywhere on the view, is the right stick: push away to go forward, pull back to reverse, left and right to slide.
-  (function () {
-    var dragId = null, ox = 0, oy = 0, REACH = 90, map = $("map"), ring = $("mstick"), dot = ring.firstElementChild;
-    window.addEventListener("contextmenu", function (e) { if (S.mode === "fly" || dragId !== null) e.preventDefault(); });
+  // Mouse look (PC): click the view to capture the mouse, then moving it turns the drone and tilts the camera. Esc frees the mouse.
+  var mouseLook = (function () {
+    var held = false, told = false, map = $("map"), YAW = 0.12, TILT = 0.10;      // degrees per pixel of mouse travel
+    function canLook() { return S.mode === "fly" && !isFpv(); }
+    function locked() { return document.pointerLockElement === scene.canvas; }
+    function release() { held = false; if (locked() && document.exitPointerLock) document.exitPointerLock(); }
     map.addEventListener("pointerdown", function (e) {
-      if (S.mode !== "fly" || e.pointerType !== "mouse" || e.button !== 2) return;
-      dragId = e.pointerId; ox = e.clientX; oy = e.clientY; e.preventDefault();
-      try { map.setPointerCapture(dragId); } catch (x) {}
-      ring.hidden = false; ring.style.left = ox + "px"; ring.style.top = oy + "px"; dot.style.transform = "";
+      if (!canLook() || e.pointerType !== "mouse" || e.button !== 0) return;
+      held = true;
+      try { var r = scene.canvas.requestPointerLock && scene.canvas.requestPointerLock(); if (r && r.catch) r.catch(function () {}); } catch (x) {}
     });
-    window.addEventListener("pointermove", function (e) {
-      if (e.pointerId !== dragId) return;
-      var dx = clamp(e.clientX - ox, -REACH, REACH), dy = clamp(e.clientY - oy, -REACH, REACH);
-      dot.style.transform = "translate(" + dx + "px," + dy + "px)";
-      input.rx = dx / REACH; input.ry = -dy / REACH;
+    window.addEventListener("pointerup", function (e) { if (e.pointerType === "mouse") held = false; });
+    document.addEventListener("pointerlockchange", function () {
+      if (locked() && !told) { told = true; toast("Mouse look on. Press Esc to get the pointer back.", 3600); }
     });
-    function stop(e) { if (e.pointerId !== dragId) return; dragId = null; input.rx = 0; input.ry = 0; ring.hidden = true; }
-    window.addEventListener("pointerup", stop); window.addEventListener("pointercancel", stop);
+    document.addEventListener("mousemove", function (e) {
+      if (!canLook() || !(locked() || held)) return;
+      var gs = $("gimbal");
+      S.heading = (S.heading + (e.movementX || 0) * YAW * D2R + TWO_PI) % TWO_PI;
+      S.gimbalT = S.gimbal = clamp(S.gimbalT - (e.movementY || 0) * TILT, +gs.min, +gs.max);   // mouse forward looks up
+      gs.value = S.gimbalT; $("gimbalLbl").textContent = gimbalText(S.gimbalT);
+    });
+    return { release: release };
   })();
   window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
   function axis(pos, neg) { return (keys[pos] ? 1 : 0) - (keys[neg] ? 1 : 0); }
@@ -780,7 +800,7 @@
   function updateMoveInfo() {
     $("durLbl").textContent = S.playDur + " s";
     $("setA").classList.toggle("on", !!S.moveA); $("setB").classList.toggle("on", !!S.moveB);
-    $("playBtn").disabled = !(S.moveA && S.moveB); $("saveMove").disabled = !(S.moveA && S.moveB);
+    $("playBtn").disabled = !(S.moveA && S.moveB); $("saveMove").disabled = !(S.moveA && S.moveB); $("recBtn").disabled = !(S.moveA && S.moveB);
     if (S.moveA && S.moveB) {
       var d = moveDistance();
       $("moveInfo").textContent = d.toFixed(0) + " m in " + S.playDur + " s · average " + (d / S.playDur).toFixed(1) + " m/s (" + (d / S.playDur * 3.6).toFixed(0) + " km/h) · " +
@@ -804,9 +824,13 @@
       play.onclick = function () {
         S.moveA = m.A; S.moveB = m.B; S.playDur = m.dur; $("dur").value = m.dur; updateMoveInfo(); $("playBtn").click();
       };
+      var vid = document.createElement("button"); vid.className = "btn"; vid.textContent = "Record";
+      vid.onclick = function () {
+        S.moveA = m.A; S.moveB = m.B; S.playDur = m.dur; $("dur").value = m.dur; updateMoveInfo(); S.recName = m.name; startMove(true);
+      };
       var del = document.createElement("button"); del.className = "btn"; del.textContent = "Delete";
       del.onclick = function () { var all = loadMoves(); all.splice(i, 1); store.set("moves", JSON.stringify(all)); renderMoves(); };
-      row.appendChild(info); row.appendChild(play); row.appendChild(del); box.appendChild(row);
+      row.appendChild(info); row.appendChild(play); row.appendChild(vid); row.appendChild(del); box.appendChild(row);
     });
   }
   $("saveMove").onclick = function () {
@@ -817,14 +841,35 @@
     toast(store.set("moves", JSON.stringify(all)) ? "Saved as Move " + n : "Couldn't save: this device's storage for the app is full");
     renderMoves();
   };
-  $("playBtn").onclick = function () {
+  function startMove(record) {
     if (!(S.moveA && S.moveB)) return;
+    if (record && !canRecord()) { toast("This browser can't record video. Try Chrome or Safari, fully updated."); return; }
     if (!S.home) setHome(S.moveA.lon / D2R, S.moveA.lat / D2R, S.moveA.h - 30);
-    $("sheet").hidden = true; S.playT = 0; setMode("play"); setClean(true);
-  };
+    S.wantRec = !!record; S.preT = 0; S.playT = 0;
+    if (record) { try { if (window.innerWidth >= 900) viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2); } catch (e) {} toast("Loading the opening frame, then recording\u2026", 2500); }
+    $("sheet").hidden = true; setMode("play"); setClean(true);
+  }
+  $("playBtn").onclick = function () { startMove(false); };
+  $("recBtn").onclick = function () { S.recName = "move"; startMove(true); };
   function stepPlay(dt) {
+    // hold on the opening frame until the map has loaded there (or 6 s at most), so a recording starts sharp
+    if (S.playT === 0 && S.preT >= 0) {
+      S.preT += dt;
+      var ready = S.preT > (S.wantRec ? 1.2 : 0.3) && (!tileset || tileset.tilesLoaded);
+      if (!(ready || S.preT > 6)) { poseAt(0); return; }
+      S.preT = -1; if (S.wantRec) { try { startRecording(); } catch (e) { S.wantRec = false; toast("Couldn't start recording on this browser"); } }
+    }
     S.playT = Math.min(1, S.playT + dt / S.playDur);
-    var a = S.moveA, b = S.moveB, t = S.playT, e = t * t * (3 - 2 * t);
+    poseAt(S.playT);
+    if (S.playT >= 1) {
+      var b = S.moveB;
+      S.focal = b.focal; setGimbal(clamp(Math.round(b.gimbal), +$("gimbal").min, +$("gimbal").max)); buildLenses(); applyLens();
+      setClean(false); setMode("fly");
+      if (S.wantRec) { S.wantRec = false; setTimeout(stopRecording, 200); } else toast("Move finished. Open Plan to replay or adjust it.");
+    }
+  }
+  function poseAt(t) {
+    var a = S.moveA, b = S.moveB, e = t * t * (3 - 2 * t);
     var dh = ((b.heading - a.heading + 3 * Math.PI) % TWO_PI) - Math.PI;
     S.lon = a.lon + (b.lon - a.lon) * e; S.lat = a.lat + (b.lat - a.lat) * e; S.h = a.h + (b.h - a.h) * e;
     S.heading = (a.heading + dh * e + TWO_PI) % TWO_PI;
@@ -832,10 +877,6 @@
     var f = Math.exp(Math.log(a.focal) + (Math.log(b.focal) - Math.log(a.focal)) * e);
     if (Math.abs(f - S.focal) > 0.01) { S.focal = f; applyLens(); }
     camera.setView({ destination: Cesium.Cartesian3.fromRadians(S.lon, S.lat, S.h), orientation: { heading: S.heading, pitch: S.gimbal * D2R, roll: 0 } });
-    if (S.playT >= 1) {
-      S.focal = b.focal; setGimbal(clamp(Math.round(b.gimbal), -90, 30)); buildLenses(); applyLens();
-      setClean(false); setMode("fly"); toast("Move finished. Open Plan to replay or adjust it.");
-    }
   }
 
   // ---------- flight loop ----------
@@ -846,8 +887,10 @@
     if (S.mode !== "fly") return;
     if (isFpv()) { stepFpv(dt, now); return; }
     var sp = SPEEDS[S.speed], fpv = false;
-    var tu = curve(input.ly) + axis("w", "s"), ty = curve(input.lx) + axis("d", "a");
-    var tf = curve(input.ry) + axis("arrowup", "arrowdown"), tr = curve(input.rx) + axis("arrowright", "arrowleft");
+    // PC keys, game-style: W/S forward and back, A/D slide; Space or E climbs, Shift or Q descends; arrows climb and turn
+    var tu = clamp(curve(input.ly) + axis(" ", "shift") + axis("e", "q") + axis("arrowup", "arrowdown"), -1, 1);
+    var ty = curve(input.lx) + axis("arrowright", "arrowleft");
+    var tf = curve(input.ry) + axis("w", "s"), tr = curve(input.rx) + axis("d", "a");
     var k = Math.min(1, dt * (fpv ? 1.4 : 3.2));    // FPV carries more momentum
     var side = fpv ? 0.45 : 1;
     if (fpv) ty += tr * 0.55 * clamp(Math.abs(S.vf) / sp.h + 0.3, 0, 1);   // banking pulls the nose round
@@ -995,122 +1038,66 @@
   $("goBtn").onclick = search;
   $("q").addEventListener("keydown", function (e) { if (e.key === "Enter") search(); });
 
-  // ---------- saved shots + shot cards ----------
-  function loadShots() { try { return JSON.parse(store.get("shots") || "[]"); } catch (e) { return []; } }
-  function saveShots(list) {
-    if (store.set("shots", JSON.stringify(list))) return true;
-    // storage is full: drop preview images from the oldest shots until it fits
-    for (var i = 0; i < list.length; i++) { if (list[i].img) { list[i].img = null; if (store.set("shots", JSON.stringify(list))) return true; } }
-    return false;
+  // ---------- video export of a move ----------
+  var rec = null, lastVideo = null;
+  function videoType() {
+    var types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
+    for (var i = 0; i < types.length; i++) { try { if (MediaRecorder.isTypeSupported(types[i])) return types[i]; } catch (e) {} }
+    return "";
   }
-  // Grab what's inside the frame guide, with the time-of-day tint applied.
-  function grabFrame(cb) {
+  function canRecord() { return typeof MediaRecorder !== "undefined" && !!document.createElement("canvas").captureStream; }
+  // Copies what's inside the frame lines into a recording canvas after every rendered frame.
+  function startRecording() {
+    var c = scene.canvas, f = frameRect, k = c.width / c.clientWidth;
+    var W = Math.min(1920, Math.round(f.w * k)); W -= W % 2;
+    var H = Math.round(W * f.h / f.w); H -= H % 2;
+    var out = document.createElement("canvas"); out.width = W; out.height = H;
+    var g = out.getContext("2d"), type = videoType(), chunks = [];
+    var mr = new MediaRecorder(out.captureStream(30), type ? { mimeType: type, videoBitsPerSecond: 12000000 } : undefined);
+    mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
     var off = scene.postRender.addEventListener(function () {
-      off();
-      try {
-        var c = scene.canvas, k = c.width / c.clientWidth, f = frameRect;
-        var out = document.createElement("canvas"); out.width = 640; out.height = Math.round(640 * f.h / f.w);
-        var g = out.getContext("2d");
-        g.drawImage(c, f.x * k, f.y * k, f.w * k, f.h * k, 0, 0, out.width, out.height);
-        g.globalCompositeOperation = "multiply";
-        var w = +$("warm").style.opacity, d = +$("dark").style.opacity;
-        if (w > 0) { g.globalAlpha = w; g.fillStyle = "#ff9a3c"; g.fillRect(0, 0, out.width, out.height); }
-        if (d > 0) { g.globalAlpha = d; g.fillStyle = "#070b22"; g.fillRect(0, 0, out.width, out.height); }
-        cb(out.toDataURL("image/jpeg", 0.72));
-      } catch (e) { cb(null); }
+      var c2 = scene.canvas, f2 = frameRect, k2 = c2.width / c2.clientWidth;
+      g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+      g.drawImage(c2, f2.x * k2, f2.y * k2, f2.w * k2, f2.h * k2, 0, 0, W, H);
+      g.globalCompositeOperation = "multiply";
+      var w = +$("warm").style.opacity, d = +$("dark").style.opacity;
+      if (w > 0) { g.globalAlpha = w; g.fillStyle = "#ff9a3c"; g.fillRect(0, 0, W, H); }
+      if (d > 0) { g.globalAlpha = d; g.fillStyle = "#070b22"; g.fillRect(0, 0, W, H); }
+      // map credit stays in the picture
+      g.globalCompositeOperation = "source-over"; g.globalAlpha = 0.85;
+      g.font = "500 " + Math.max(11, Math.round(H * 0.022)) + "px sans-serif"; g.textBaseline = "bottom";
+      g.shadowColor = "rgba(0,0,0,.9)"; g.shadowBlur = 4; g.fillStyle = "#fff";
+      g.fillText("Map data \u00a9 Google \u00b7 Shot Scout preview", Math.round(W * 0.012), H - Math.round(H * 0.014));
+      g.shadowBlur = 0;
     });
+    rec = { mr: mr, off: off, chunks: chunks, type: type, name: S.recName || "move" };
+    mr.start(250);
   }
-  function shotFacts(s) {
-    var latD = s.lat / D2R, lonD = s.lon / D2R, tz = s.tz === undefined ? deviceTz : s.tz;
-    var sun = sunPosition(instant(s.date, s.minutes, tz), latD, lonD), hd = s.heading / D2R;
-    var facts = [["Lens", Math.round(s.focal) + "mm full-frame equivalent"],
-                 ["When", s.date + " " + hhmm(s.minutes) + " (" + tzText(tz) + ")"],
-                 ["Sun", sunText(sun)],
-                 ["Drone position", latD.toFixed(6) + ", " + lonD.toFixed(6)],
-                 ["Heading", compass(hd) + " " + Math.round(hd) + "°"],
-                 ["Camera tilt", Math.round(s.gimbal) + "°"]];
-    if (s.home) {
-      var o = homeOffset(s.lon, s.lat, s.h, s.home);
-      facts.splice(4, 0, ["Height", o.up.toFixed(0) + " m above takeoff"], ["Distance", o.dist.toFixed(0) + " m from takeoff"],
-                         ["Takeoff point", s.home.lat.toFixed(6) + ", " + s.home.lon.toFixed(6)]);
-    }
-    return facts;
-  }
-  function renderShots() {
-    var box = $("shots"), shots = loadShots(); box.innerHTML = "";
-    if (!shots.length) { var n = document.createElement("div"); n.className = "note"; n.textContent = "None yet. Frame a shot and tap Save shot."; box.appendChild(n); return; }
-    shots.forEach(function (s, i) {
-      var row = document.createElement("div"); row.className = "shot";
-      var img = document.createElement("img"); if (s.img) img.src = s.img; img.alt = "";
-      var info = document.createElement("div");
-      var name = document.createElement("b"); name.textContent = s.name;
-      var meta = document.createElement("small"); meta.textContent = Math.round(s.focal) + "mm · " + s.date + " " + hhmm(s.minutes);
-      info.appendChild(name); info.appendChild(meta);
-      var open = document.createElement("button"); open.className = "btn"; open.textContent = "Open";
-      open.onclick = function () { openCard(i); };
-      row.appendChild(img); row.appendChild(info); row.appendChild(open); box.appendChild(row);
-    });
-  }
-  var cardIx = -1;
-  function openCard(i) {
-    var s = loadShots()[i]; if (!s) return;
-    cardIx = i;
-    $("cardImg").hidden = !s.img; if (s.img) $("cardImg").src = s.img;
-    $("cardName").value = s.name;
-    var t = $("cardFacts"); t.innerHTML = "";
-    shotFacts(s).forEach(function (f) {
-      var tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td");
-      a.textContent = f[0]; b.textContent = f[1]; tr.appendChild(a); tr.appendChild(b); t.appendChild(tr);
-    });
-    $("sheet").hidden = true; $("card").hidden = false;
-  }
-  $("cardName").onchange = function () {
-    var all = loadShots(); if (!all[cardIx]) return;
-    all[cardIx].name = this.value.trim() || all[cardIx].name; saveShots(all);
-  };
-  $("cardClose").onclick = function () { $("card").hidden = true; renderShots(); $("sheet").hidden = false; };
-  $("cardDelete").onclick = function () {
-    var all = loadShots(); all.splice(cardIx, 1); saveShots(all);
-    $("card").hidden = true; renderShots(); $("sheet").hidden = false;
-  };
-  $("cardView").onclick = function () {
-    var s = loadShots()[cardIx]; if (!s) return;
-    if (S.speed === "fpv") $("speedBtn").click();   // leave FPV so the shot shows with its own lens and a level horizon
-    S.lon = s.lon; S.lat = s.lat; S.h = s.h; S.heading = s.heading; S.focal = s.focal;
-    if (s.home) setHome(s.home.lon, s.home.lat, s.home.h); else setHome(s.lon / D2R, s.lat / D2R, s.h - 30);
-    setGimbal(clamp(Math.round(s.gimbal), -90, 30));
-    if (s.tz !== undefined) S.tz = s.tz;
-    $("date").value = s.date; $("time").value = s.minutes;
-    buildLenses(); applyLens(); setMode("fly"); applyTime(); buildSunButtons(); $("card").hidden = true;
-  };
-  $("cardShare").onclick = function () {
-    var s = loadShots()[cardIx]; if (!s) return;
-    var text = s.name + "\n" + shotFacts(s).map(function (f) { return f[0] + ": " + f[1]; }).join("\n") + "\nPlanned with Shot Scout · Peacemaker Filmworks";
-    function copy() {
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast("Shot details copied"); }, function () { toast("Couldn't share from this browser"); });
-      else toast("Couldn't share from this browser");
-    }
-    if (!navigator.share) { copy(); return; }
-    var send = function (files) {
-      var data = { title: s.name, text: text };
-      if (files && navigator.canShare && navigator.canShare({ files: files })) data.files = files;
-      navigator.share(data).catch(function (e) { if (e && e.name !== "AbortError") copy(); });
+  function stopRecording() {
+    if (!rec) return;
+    var r = rec; rec = null; r.off();
+    r.mr.onstop = function () {
+      var type = (r.mr.mimeType || r.type || "video/webm").split(";")[0];
+      var blob = new Blob(r.chunks, { type: type });
+      if (!blob.size) { toast("The recording came out empty on this browser"); return; }
+      showVideo(blob, r.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + (type.indexOf("mp4") >= 0 ? ".mp4" : ".webm"));
     };
-    if (s.img) {
-      fetch(s.img).then(function (r) { return r.blob(); }).then(function (b) { send([new File([b], "shot.jpg", { type: "image/jpeg" })]); }, function () { send(null); });
-    } else { send(null); }
-  };
-  $("saveBtn").onclick = function () {
-    var st = captureState(), shots = loadShots();
-    grabFrame(function (img) {
-      var s = { name: "Shot " + (shots.length + 1), lon: st.lon, lat: st.lat, h: st.h, heading: st.heading, gimbal: Math.round(st.gimbal), focal: Math.round(st.focal),
-                date: $("date").value, minutes: +$("time").value, tz: S.tz, home: S.mode === "fly" ? S.home : null, img: img };
-      shots.push(s);
-      toast(saveShots(shots) ? "Saved as " + s.name : "Couldn't save: this phone's storage for the app is full");
-      renderShots();
-    });
-  };
-  $("menuBtn").onclick = function () { renderShots(); renderMoves(); buildSunButtons(); updateMoveInfo(); $("sheet").hidden = false; };
+    try { r.mr.stop(); } catch (e) { toast("Couldn't finish the recording"); }
+    try { viewer.resolutionScale = 1; } catch (e) {}
+  }
+  function showVideo(blob, filename) {
+    if (lastVideo) URL.revokeObjectURL(lastVideo.url);
+    lastVideo = { url: URL.createObjectURL(blob), blob: blob, name: filename };
+    $("vidPlayer").src = lastVideo.url; $("vidSave").href = lastVideo.url; $("vidSave").download = filename;
+    $("vidInfo").textContent = filename + " \u00b7 " + (blob.size / 1048576).toFixed(1) + " MB";
+    var file = null; try { file = new File([blob], filename, { type: blob.type }); } catch (e) {}
+    $("vidShare").hidden = !(file && navigator.canShare && navigator.canShare({ files: [file] }));
+    $("vidShare").onclick = function () { navigator.share({ files: [file], title: filename }).catch(function () {}); };
+    $("vid").hidden = false;
+  }
+  $("vidClose").onclick = function () { $("vid").hidden = true; try { $("vidPlayer").pause(); } catch (e) {} };
+
+  $("menuBtn").onclick = function () { renderMoves(); buildSunButtons(); updateMoveInfo(); $("sheet").hidden = false; };
   $("closeSheet").onclick = function () { $("sheet").hidden = true; };
   $("resetTok").onclick = function () { store.del("ionToken"); $("sheet").hidden = true; showGate(); };
 
